@@ -39,6 +39,7 @@
             {% if nav_families|length > 1 %}
               {% for f in nav_families %}<a href="{{ f.get_absolute_url }}">{% icon 'users' %} {{ f.name }}</a>{% endfor %}
             {% endif %}
+            {% if nav_family %}<a href="{% url 'advent' nav_family.slug %}">{% icon 'star' %} Calendrier de l'Avent</a>{% endif %}
             {% if nav_me.is_admin %}<a href="{% url 'manage' nav_family.slug %}">{% icon 'settings' %} Gérer la famille</a>{% endif %}
             <a href="{% url 'account' %}">{% icon 'user' %} Mon compte</a>
             <a href="{% url 'home' %}?toutes=1">{% icon 'plus' %} Rejoindre une autre famille</a>

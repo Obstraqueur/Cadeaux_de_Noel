@@ -4,7 +4,8 @@
              ├─ Membre (une personne ; avec ou sans compte, éventuellement gérée par un parent)
              │    └─ Idée (sur la liste d'un membre, écrite par lui ou suggérée par un proche)
              │         └─ Réservation (qui s'en occupe, avec d'éventuels participants)
-             └─ Tirage d'amis secrets ── Attribution (qui offre à qui)
+             ├─ Tirage d'amis secrets (1 à 3 boucles) ── Attribution (qui offre à qui)
+             └─ Calendrier de l'Avent (une case par jour)
 
 Les règles de visibilité (surprise préservée) sont regroupées dans `noel/visibility.py`.
 """
@@ -137,6 +138,8 @@ class Idea(models.Model):
     details = models.TextField("précisions", blank=True)
     url = models.URLField("lien", max_length=500, blank=True)
     price = models.CharField("prix indicatif", max_length=40, blank=True)
+    preview_image = models.URLField("image du produit", max_length=800, blank=True,
+                                    help_text="Trouvée automatiquement à partir du lien.")
     favorite = models.BooleanField("j'en rêve", default=False)
     year = models.PositiveIntegerField("année", default=current_season)
     archived = models.BooleanField("retirée", default=False)
@@ -239,3 +242,35 @@ class Assignment(models.Model):
 
     def __str__(self):
         return f"{self.giver} → {self.receiver}"
+
+
+def advent_upload_to(instance, filename):
+    ext = (filename.rsplit(".", 1)[-1] if "." in filename else "png").lower()
+    return f"avent/{instance.family_id}/{instance.date:%Y-%m-%d}-{secrets.token_hex(4)}.{ext}"
+
+
+class AdventDay(models.Model):
+    """Une case du calendrier de l'Avent : une image « porte » et une image (ou un texte) à l'intérieur.
+
+    Une case ne s'ouvre qu'à partir de son jour : les images sont servies par une vue
+    qui vérifie la date (impossible de tricher en devinant l'adresse).
+    """
+
+    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="advent_days")
+    date = models.DateField("jour")
+    title = models.CharField("titre", max_length=120, blank=True)
+    cover = models.FileField("image de la porte", upload_to=advent_upload_to, blank=True)
+    inside = models.FileField("image à l'intérieur", upload_to=advent_upload_to, blank=True)
+    text = models.TextField("texte à l'intérieur", blank=True)
+
+    class Meta:
+        verbose_name = "case du calendrier de l'Avent"
+        verbose_name_plural = "calendrier de l'Avent"
+        ordering = ["date"]
+        constraints = [models.UniqueConstraint(fields=["family", "date"], name="une_case_par_jour")]
+
+    def __str__(self):
+        return f"{self.date:%d/%m/%Y} {self.title}".strip()
+
+    def is_open(self, today=None):
+        return self.date <= (today or timezone.localdate())

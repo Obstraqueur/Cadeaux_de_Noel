@@ -47,4 +47,7 @@ urlpatterns = [
     path("f/<slug:slug>/amis-secrets/", views.draws, name="draws"),
     path("f/<slug:slug>/amis-secrets/<int:draw_id>/supprimer/", views.draw_delete, name="draw_delete"),
     path("f/<slug:slug>/gestion/", views.manage, name="manage"),
+    path("f/<slug:slug>/avent/", views.advent, name="advent"),
+    path("f/<slug:slug>/avent/gestion/", views.advent_manage, name="advent_manage"),
+    path("f/<slug:slug>/avent/<int:day_id>/<str:kind>/", views.advent_image, name="advent_image"),
 ]

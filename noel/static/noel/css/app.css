@@ -163,6 +163,7 @@ img { max-width: 100%; }
 .mine__text strong { font: 700 1.25rem/1.15 var(--f-display); }
 .mine__text span { opacity: .85; }
 .mine__cta { margin-left: auto; font-weight: 700; padding: 8px 16px; border-radius: var(--r-btn); background: color-mix(in srgb, var(--primary-ink) 16%, transparent); white-space: nowrap; }
+@media (max-width: 480px) { .mine__cta { display: none; } }
 .mine__icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--soft); color: var(--primary); }
 
 .santa {
@@ -257,6 +258,10 @@ img { max-width: 100%; }
   .tag__status { grid-column: 1; }
   .tag__actions { grid-column: 2; grid-row: 1 / span 2; justify-content: flex-end; }
 }
+.tag__thumb { float: right; width: 76px; height: 76px; margin: 0 0 8px 12px; border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid var(--line); }
+.tag__thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.tag__body::after { content: ""; display: block; clear: both; }
+.row__thumb { width: 52px; height: 52px; object-fit: contain; border-radius: 10px; background: #fff; border: 1px solid var(--line); flex: none; }
 .tag__title { font-weight: 700; font-size: 1.08rem; overflow-wrap: anywhere; }
 .tag__fav { color: var(--accent); margin-right: 2px; }
 .tag__fav .icon { fill: currentColor; width: 1em; height: 1em; vertical-align: -.1em; }
@@ -412,6 +417,48 @@ textarea.input { min-height: 70px; resize: vertical; }
 .pick { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--bg); cursor: pointer; }
 .pick:has(input:checked) { background: color-mix(in srgb, var(--primary) 14%, var(--surface)); }
 .pick input { accent-color: var(--primary); width: 18px; height: 18px; }
+
+/* ---------- calendrier de l'Avent ---------- */
+.advent { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.door { aspect-ratio: 3 / 4; }
+.door__btn {
+  position: relative; display: grid; place-items: center; width: 100%; height: 100%; overflow: hidden;
+  border-radius: 14px; border: 0; padding: 0; cursor: pointer; font: inherit;
+  background: var(--primary); color: #fff; box-shadow: var(--shadow-tag);
+  transition: transform .2s;
+}
+.door__btn img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.door__btn:hover { transform: translateY(-2px) rotate(-1deg); }
+.door__num { position: relative; font: 800 2rem/1 var(--f-display); text-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.door__btn img + .door__num { display: none; }
+.door__flag { position: absolute; left: 6px; right: 6px; bottom: 6px; background: var(--accent); color: #fff; border-radius: 99px; font-size: .75rem; font-weight: 700; padding: 3px 6px; text-align: center; }
+.door--today .door__btn { outline: 3px solid var(--accent); outline-offset: 3px; animation: door-glow 2.4s ease-in-out infinite; }
+@keyframes door-glow { 50% { outline-color: var(--gold); } }
+.door--seen .door__btn::after { content: "✓"; position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: #fff; color: var(--ok); font-weight: 800; font-size: .8rem; display: grid; place-items: center; }
+.door__btn--locked { cursor: default; background: repeating-linear-gradient(135deg, var(--soft) 0 10px, color-mix(in srgb, var(--soft) 70%, #fff) 10px 20px); color: var(--muted); box-shadow: none; border: 1.5px dashed var(--line); }
+.door__btn--locked:hover { transform: none; }
+.door__btn--locked .door__num { text-shadow: none; opacity: .55; }
+.door__lock { position: absolute; bottom: 8px; font-size: .75rem; }
+
+.advent-view { width: min(94vw, 560px); max-height: 92dvh; padding: 0; border: 0; border-radius: 20px; background: var(--surface); color: var(--text); box-shadow: 0 30px 60px -20px rgba(0,0,0,.5); }
+.advent-view::backdrop { background: rgba(5, 20, 15, .6); backdrop-filter: blur(3px); }
+.advent-view__bar { position: sticky; top: 0; display: flex; align-items: center; gap: 4px; padding: 8px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.advent-view__title { flex: 1; text-align: center; font: 700 1.05rem/1.2 var(--f-display); }
+.advent-view__next .icon { transform: scaleX(-1); }
+.advent-view__bar form { margin: 0; }
+.advent-view__bar button:disabled { opacity: .3; cursor: default; }
+.advent-view__body { padding: 12px; display: grid; gap: 12px; }
+.advent-view__body img { width: 100%; height: auto; border-radius: 12px; display: block; }
+.advent-view__text { white-space: pre-line; line-height: 1.65; padding: 4px 6px 10px; }
+
+.advent-admin { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.advent-admin li { display: flex; align-items: center; gap: 12px; padding: 8px; background: var(--bg); border-radius: 12px; }
+.advent-admin img, .advent-admin__ph { width: 42px; height: 56px; object-fit: cover; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--soft); font-weight: 800; }
+.advent-admin__txt { display: grid; min-width: 0; }
+.advent-admin__txt span { color: var(--muted); font-size: .9rem; }
+.advent-admin form { margin-left: auto; }
+.mine__card--advent { background: var(--accent); color: #fff; }
+.mine__card--advent .mine__icon { background: rgba(255,255,255,.18); color: #fff; }
 
 /* ---------- gestion ---------- */
 .members { list-style: none; margin: 0; padding: 0; display: grid; }

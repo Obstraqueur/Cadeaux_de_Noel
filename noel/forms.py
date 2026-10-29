@@ -152,3 +152,55 @@ class HouseholdForm(StyledMixin, forms.ModelForm):
 class FamilyForm(StyledMixin, forms.Form):
     name = forms.CharField(label="Nom de la famille", max_length=80,
                            widget=forms.TextInput(attrs={"placeholder": "Ex. Famille Jean"}))
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleImagesField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput(attrs={"accept": "image/*", "multiple": True}))
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single = super().clean
+        files = data if isinstance(data, (list, tuple)) else [data]
+        return [single(f, initial) for f in files if f]
+
+
+def _check_image(f):
+    if f and getattr(f, "content_type", "image/").split("/")[0] != "image":
+        raise forms.ValidationError("Ce fichier n'est pas une image.")
+    if f and f.size > 10 * 1024 * 1024:
+        raise forms.ValidationError("Image trop lourde (10 Mo maximum).")
+    return f
+
+
+class AdventBulkForm(StyledMixin, forms.Form):
+    start = forms.DateField(label="Jour de la case 0 (ou 1)", widget=forms.DateInput(attrs={"type": "date"}),
+                            help_text="« day0 » tombe ce jour-là, « day1 » le lendemain, etc.")
+    files = MultipleImagesField(label="Images", help_text="Nommées day0.png, day0_modal.png, day1.png, day1_modal.png… "
+                                "(« _modal » = l'image à l'intérieur).")
+
+    def clean_files(self):
+        return [_check_image(f) for f in self.cleaned_data["files"]]
+
+
+class AdventDayForm(StyledMixin, forms.ModelForm):
+    class Meta:
+        from .models import AdventDay
+        model = AdventDay
+        fields = ["date", "title", "cover", "inside", "text"]
+        widgets = {
+            "date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "cover": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+            "inside": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+            "text": forms.Textarea(attrs={"rows": 4, "placeholder": "Facultatif : un texte, un verset, une méditation…"}),
+        }
+
+    def clean_cover(self):
+        return _check_image(self.cleaned_data.get("cover"))
+
+    def clean_inside(self):
+        return _check_image(self.cleaned_data.get("inside"))

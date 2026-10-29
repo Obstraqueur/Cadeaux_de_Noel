@@ -1,4 +1,6 @@
 import json
+import re
+from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
@@ -8,7 +10,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
-from django.http import HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -16,8 +18,10 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.views.decorators.http import require_POST
 
-from . import secret_santa, visibility
+from . import preview, secret_santa, visibility
 from .forms import (
+    AdventBulkForm,
+    AdventDayForm,
     AccountForm,
     DrawForm,
     FamilyForm,
@@ -28,7 +32,7 @@ from .forms import (
     NewProfileForm,
     SignupForm,
 )
-from .models import Assignment, Draw, Family, Household, Idea, Member, Reservation, current_season
+from .models import AdventDay, Assignment, Draw, Family, Household, Idea, Member, Reservation, current_season
 
 
 # --------------------------------------------------------------------------- utilitaires
@@ -228,6 +232,9 @@ def family(request, slug):
         "my_ideas_count": my_ideas_count,
         "days": days_until_christmas(),
         "season": season,
+        "advent_today": AdventDay.objects.filter(family=family, date=timezone.localdate()).first(),
+        "advent_soon": AdventDay.objects.filter(family=family, date__gt=timezone.localdate(),
+                                                date__lte=timezone.localdate() + timedelta(days=30)).first(),
     })
 
 
@@ -291,6 +298,7 @@ def idea_add(request, slug, member_id):
     idea.recipient = recipient
     # Une idée écrite par un gestionnaire (parent) n'est pas une surprise : voir Idea.is_surprise.
     idea.author = viewer
+    idea.preview_image = preview.fetch_preview(idea.url) if idea.url else ""
     idea.save()
     if is_htmx(request) and visibility.is_owner_view(recipient, request.user):
         # Sa propre liste reste cachée : on confirme sans afficher l'idée.
@@ -321,9 +329,12 @@ def idea_edit(request, slug, idea_id):
             if renew:
                 return render(request, "noel/partials/review_item.html", {"idea": idea, "family": family})
             return render_idea(request, idea, viewer)
+        old_url = idea.url
         form = IdeaForm(request.POST, instance=idea)
         if form.is_valid():
             idea = form.save(commit=False)
+            if idea.url != old_url or (idea.url and not idea.preview_image):
+                idea.preview_image = preview.fetch_preview(idea.url) if idea.url else ""
             if renew:
                 idea.year = current_season()
             idea.save()
@@ -466,22 +477,50 @@ def my_reservations(request, slug):
 
 # --------------------------------------------------------------------------- amis secrets
 
+def _last_draw(family):
+    return Draw.objects.filter(family=family, year__lt=current_season()).order_by("-year", "-created_at").first()
+
+
+def _default_participants(family):
+    """Par défaut : les participants du dernier tirage, sinon tout le monde."""
+    last = _last_draw(family)
+    if last:
+        ids = set(last.assignments.values_list("giver_id", flat=True))
+        if ids:
+            return family.members.filter(pk__in=ids)
+    return family.members.all()
+
+
+def _default_rounds(family):
+    last = _last_draw(family)
+    return last.rounds if last else 2
+
+
 @login_required
 def draws(request, slug):
     family, viewer = family_and_viewer(request, slug)
     form = DrawForm(request.POST or None, family=family,
-                    initial={"title": f"Amis secrets {current_season()}", "rounds": 3,
-                             "participants": family.members.all()})
+                    initial={"title": f"Amis secrets {current_season()}", "rounds": _default_rounds(family),
+                             "participants": _default_participants(family)})
     if request.method == "POST":
         require_admin(viewer)
         if form.is_valid():
             participants = list(form.cleaned_data["participants"])
             households = {m.pk: m.household_id for m in participants}
             last = Draw.objects.filter(family=family, year=current_season() - 1)
-            previous = set(Assignment.objects.filter(draw__in=last).values_list("giver_id", "receiver_id"))
+            last_pairs = set(Assignment.objects.filter(draw__in=last).values_list("giver_id", "receiver_id"))
+            # Comme dans l'ancien site : on évite aussi qu'un membre du foyer retombe sur une
+            # personne déjà tirée l'an dernier par quelqu'un de ce foyer (règle assouplie en dernier recours).
+            last_houses = dict(Member.objects.filter(pk__in={g for g, _ in last_pairs}).values_list("pk", "household_id"))
+            previous_household = set()
+            for g, r in last_pairs:
+                house = last_houses.get(g)
+                if house:
+                    previous_household |= {(m, r) for m, h in households.items() if h == house}
             try:
-                result = secret_santa.draw([m.pk for m in participants], households, previous,
-                                            rounds=form.cleaned_data["rounds"])
+                result = secret_santa.draw([m.pk for m in participants], households, last_pairs,
+                                            rounds=form.cleaned_data["rounds"],
+                                            previous_household=previous_household)
             except secret_santa.DrawImpossible as e:
                 form.add_error(None, str(e))
             else:
@@ -494,7 +533,8 @@ def draws(request, slug):
                     )
                 text = "Tirage effectué ! Chacun découvre son ami secret sur l'accueil."
                 if result.relaxed:
-                    text += " (Il a fallu assouplir : " + ", ".join(result.relaxed) + ".)"
+                    text += (" Impossible de tout respecter avec ces foyers et ces participants : on a "
+                             "seulement assoupli « " + "», « ".join(result.relaxed) + " ».")
                 messages.success(request, text)
                 return redirect("draws", slug=family.slug)
 
@@ -623,4 +663,106 @@ def my_count(request, slug):
     family, viewer = family_and_viewer(request, slug)
     return render(request, "noel/partials/my_count.html", {
         "family": family, "count": visibility.own_count(viewer), "season": current_season(),
+    })
+
+
+# --------------------------------------------------------------------------- calendrier de l'Avent
+
+def _advent_days(family):
+    return AdventDay.objects.filter(family=family, date__year=current_season()).order_by("date")
+
+
+@login_required
+def advent(request, slug):
+    family, viewer = family_and_viewer(request, slug)
+    today = timezone.localdate()
+    days = list(_advent_days(family))
+    for i, d in enumerate(days):
+        d.number = (d.date - days[0].date).days if days else i
+        d.open = d.is_open(today)
+        d.today = d.date == today
+    return render(request, "noel/advent.html", {
+        "family": family, "viewer": viewer, "days": days, "today": today,
+    })
+
+
+@login_required
+def advent_image(request, slug, day_id, kind):
+    """Sert une image du calendrier, seulement si la case est déjà ouverte (ou pour un organisateur)."""
+    family, viewer = family_and_viewer(request, slug)
+    day = get_object_or_404(AdventDay, pk=day_id, family=family)
+    if not day.is_open() and not viewer.is_admin:
+        raise Http404
+    f = day.cover if kind == "porte" else day.inside
+    if not f:
+        raise Http404
+    try:
+        resp = FileResponse(f.open("rb"))
+    except FileNotFoundError:
+        raise Http404
+    resp["Cache-Control"] = "private, max-age=86400"
+    return resp
+
+
+ADVENT_NAME = re.compile(r"^(?:day|jour)[ _-]?(\d{1,2})(_modal|_interieur|_inside)?\.(png|jpe?g|webp|gif)$", re.I)
+
+
+def handle_advent_bulk(family, start, files):
+    """Range des fichiers « day0.png, day0_modal.png, day1.png… » : dayN → jour de départ + N."""
+    done, ignored = 0, []
+    for f in files:
+        m = ADVENT_NAME.match(f.name)
+        if not m:
+            ignored.append(f.name)
+            continue
+        n, inside = int(m.group(1)), bool(m.group(2))
+        day, _ = AdventDay.objects.get_or_create(family=family, date=start + timedelta(days=n),
+                                                 defaults={"title": f"Jour {n}"})
+        field = day.inside if inside else day.cover
+        if field:
+            field.delete(save=False)
+        field.save(f.name, f, save=True)
+        done += 1
+    return done, ignored
+
+
+@login_required
+def advent_manage(request, slug):
+    family, viewer = family_and_viewer(request, slug)
+    require_admin(viewer)
+    season = current_season()
+    bulk = AdventBulkForm(initial={"start": date(season, 11, 30)})
+    single = AdventDayForm(initial={"date": timezone.localdate()})
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "bulk":
+            bulk = AdventBulkForm(request.POST, request.FILES)
+            if bulk.is_valid():
+                done, ignored = handle_advent_bulk(family, bulk.cleaned_data["start"], bulk.cleaned_data["files"])
+                msg = f"{done} image{'s' if done > 1 else ''} rangée{'s' if done > 1 else ''} dans le calendrier."
+                if ignored:
+                    msg += " Noms non reconnus, ignorés : " + ", ".join(ignored[:5])
+                messages.success(request, msg)
+                return redirect("advent_manage", slug=family.slug)
+        elif action == "day":
+            day_date = request.POST.get("date")
+            instance = AdventDay.objects.filter(family=family, date=day_date).first()
+            single = AdventDayForm(request.POST, request.FILES, instance=instance)
+            if single.is_valid():
+                day = single.save(commit=False)
+                day.family = family
+                day.save()
+                messages.success(request, f"Case du {day.date:%d/%m} enregistrée.")
+                return redirect("advent_manage", slug=family.slug)
+        elif action == "delete":
+            day = get_object_or_404(AdventDay, family=family, pk=request.POST.get("id"))
+            for f in (day.cover, day.inside):
+                if f:
+                    f.delete(save=False)
+            day.delete()
+            messages.success(request, "Case supprimée.")
+            return redirect("advent_manage", slug=family.slug)
+    return render(request, "noel/advent_manage.html", {
+        "family": family, "viewer": viewer, "days": _advent_days(family), "bulk": bulk, "single": single,
+        "season": season,
     })

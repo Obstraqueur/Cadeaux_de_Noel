@@ -359,3 +359,75 @@ class ImportTests(TestCase):
         self.assertEqual(User.objects.get(username="Edmond").password, "pbkdf2_sha256$1$x$y")
         self.assertIsNone(fam.members.get(name="Frederic").user)
         self.assertLessEqual(len(Idea.objects.get(recipient__name="Frederic").title), 112)
+
+
+class AdventTests(Base):
+    def setUp(self):
+        super().setUp()
+        from datetime import timedelta
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test import override_settings
+        import shutil
+        self.tmp = tempfile.mkdtemp()
+        self.override = override_settings(MEDIA_ROOT=self.tmp)
+        self.override.enable()
+        self.addCleanup(self.override.disable)
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        from django.utils import timezone
+        self.today = timezone.localdate()
+        png = b"\x89PNG\r\n\x1a\n" + b"0" * 50
+        self.files = lambda: [
+            SimpleUploadedFile("day0.png", png, "image/png"),
+            SimpleUploadedFile("day0_modal.png", png, "image/png"),
+            SimpleUploadedFile("day1.png", png, "image/png"),
+            SimpleUploadedFile("notes.txt", b"x", "image/png"),
+        ]
+        self.start = self.today  # day0 = aujourd'hui, day1 = demain
+
+    def test_bulk_upload_and_lock_future(self):
+        from .models import AdventDay
+        self.login(self.alice)
+        r = self.client.post(self.url("advent_manage"), {"action": "bulk", "start": self.start.isoformat(),
+                                                          "files": self.files()})
+        self.assertEqual(r.status_code, 302)
+        days = list(AdventDay.objects.order_by("date"))
+        self.assertEqual(len(days), 2)
+        self.assertTrue(days[0].inside and days[0].cover and days[1].cover)
+        # aujourd'hui : visible ; demain : refusé pour un membre, permis pour l'organisateur
+        self.login(self.bob)
+        self.assertEqual(self.client.get(self.url("advent_image", days[0].pk, "interieur")).status_code, 200)
+        self.assertEqual(self.client.get(self.url("advent_image", days[1].pk, "porte")).status_code, 404)
+        page = self.client.get(self.url("advent")).content.decode()
+        self.assertIn("pas encore ouverte", page)
+        self.login(self.alice)
+        self.assertEqual(self.client.get(self.url("advent_image", days[1].pk, "porte")).status_code, 200)
+
+    def test_non_admin_cannot_manage_advent(self):
+        self.login(self.bob)
+        self.assertEqual(self.client.get(self.url("advent_manage")).status_code, 403)
+
+
+class PreviewTests(TestCase):
+    def test_find_image(self):
+        from .preview import find_image
+        html = '<head><meta property="og:image" content="/img/produit.jpg"></head>'
+        self.assertEqual(find_image(html, "https://boutique.fr/p/1"), "https://boutique.fr/img/produit.jpg")
+        html2 = '<meta content="https://cdn.x/y.png" name="twitter:image">'
+        self.assertEqual(find_image(html2, "https://a.fr"), "https://cdn.x/y.png")
+        self.assertEqual(find_image("<p>rien</p>", "https://a.fr"), "")
+
+    def test_private_addresses_refused(self):
+        from .preview import fetch_preview
+        self.assertEqual(fetch_preview("http://127.0.0.1/admin"), "")
+        self.assertEqual(fetch_preview("file:///etc/passwd"), "")
+
+    def test_preview_saved_on_add(self):
+        from unittest import mock
+        fam = Family.objects.create(name="F")
+        u = User.objects.create_user("Zoe", password="x" * 8)
+        m = Member.objects.create(family=fam, user=u, name="Zoe")
+        self.client.force_login(u)
+        with mock.patch("noel.preview.fetch_preview", return_value="https://cdn.fr/img.jpg"):
+            self.client.post(reverse("idea_add", args=[fam.slug, m.pk]),
+                             {"title": "Lampe", "url": "https://boutique.fr/lampe"}, HTTP_HX_REQUEST="true")
+        self.assertEqual(Idea.objects.get().preview_image, "https://cdn.fr/img.jpg")

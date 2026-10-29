@@ -87,6 +87,45 @@
     boxes.forEach((b) => (b.checked = !all));
   });
 
+  /* ---------- calendrier de l'Avent ---------- */
+  const adventData = document.getElementById("advent-data");
+  const adventView = document.getElementById("advent-view");
+  if (adventData && adventView) {
+    const days = JSON.parse(adventData.textContent);
+    let cur = -1;
+    const show = (i) => {
+      const d = days[i];
+      if (!d) return;
+      cur = i;
+      adventView.querySelector(".advent-view__title").textContent = d.title;
+      const body = adventView.querySelector(".advent-view__body");
+      body.innerHTML = "";
+      if (d.img) { const im = new Image(); im.src = d.img; im.alt = d.title; body.appendChild(im); }
+      if (d.text) { const p = document.createElement("p"); p.className = "advent-view__text"; p.textContent = d.text; body.appendChild(p); }
+      const prev = days.slice(0, i).some(Boolean), next = days.slice(i + 1).some(Boolean);
+      adventView.querySelector('[data-advent-nav="-1"]').disabled = !prev;
+      adventView.querySelector('[data-advent-nav="1"]').disabled = !next;
+      try { localStorage.setItem("avent-" + location.pathname + "-" + i, "1"); } catch (_) {}
+      const door = document.querySelector(`[data-advent-open="${i}"]`);
+      if (door) door.closest(".door").classList.add("door--seen");
+      if (!adventView.open) adventView.showModal();
+    };
+    document.querySelectorAll("[data-advent-open]").forEach((b) => {
+      const i = +b.dataset.adventOpen;
+      try { if (localStorage.getItem("avent-" + location.pathname + "-" + i)) b.closest(".door").classList.add("door--seen"); } catch (_) {}
+      b.addEventListener("click", () => show(i));
+    });
+    adventView.querySelectorAll("[data-advent-nav]").forEach((b) => b.addEventListener("click", () => {
+      const step = +b.dataset.adventNav;
+      for (let j = cur + step; j >= 0 && j < days.length; j += step) if (days[j]) return show(j);
+    }));
+    adventView.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") adventView.querySelector('[data-advent-nav="-1"]').click();
+      if (e.key === "ArrowRight") adventView.querySelector('[data-advent-nav="1"]').click();
+    });
+    adventView.addEventListener("click", (e) => { if (e.target === adventView) adventView.close(); });
+  }
+
   /* ---------- neige (discrète, coupable, absente si mouvement réduit) ---------- */
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let snowOn = true;

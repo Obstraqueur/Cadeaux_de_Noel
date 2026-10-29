@@ -32,6 +32,16 @@
   </a>
   {% endif %}
 
+  {% if advent_today or advent_soon %}
+  <a class="mine__card mine__card--advent" href="{% url 'advent' family.slug %}">
+    <span class="mine__icon">{% icon 'star' %}</span>
+    <span class="mine__text">
+      <strong>Calendrier de l'Avent</strong>
+      <span>{% if advent_today %}La case du jour est ouverte{% else %}Première case le {{ advent_soon.date|date:"j F" }}{% endif %}</span>
+    </span>
+  </a>
+  {% endif %}
+
   {% for g in santa_groups %}
   <div class="santa">
     <span class="santa__label">{{ g.draw.title }}{% if g.giver.pk != viewer.pk %}, pour {{ g.giver.name }}{% endif %}</span>

@@ -22,6 +22,25 @@
 
 ---
 
+## 1 bis. Ce que la version 2025 a ajouté
+
+*D'après le dossier `Noel/Noel/Cadeaux` (fichiers modifiés jusqu'au 8 décembre 2025) et sa base du 1er décembre 2025.*
+
+- **Calendrier de l'Avent** : 25 images « porte » (le numéro du jour) et 25 images « intérieur » (une méditation sur le psaume 23), du 30 novembre au 24 décembre. Sur l'accueil, seule la case du jour s'affiche, et des flèches permettent de revenir aux jours passés.
+  - ✅ Très belle idée, qui donne une raison de revenir sur le site chaque jour de décembre.
+  - ⚠️ **On peut voir les jours à venir** en changeant la date dans l'adresse `/avent/get/?date=…` : rien ne vérifie la date côté serveur.
+  - ⚠️ **Erreur dans les données** : le 1er décembre affiche le jour 3, et les 2 et 3 décembre n'existent pas (23 cases au lieu de 25).
+  - ⚠️ Les images ne s'ajoutent qu'en ligne de commande sur le serveur.
+- **Tirages rangés par année** (colonne `annee`) : 2 boucles en 2025, 2 en 2024. Le tirage évite qu'un membre d'un foyer retombe sur une personne tirée par son foyer cette année ou l'an dernier, avec jusqu'à 100 essais. ⚠️ Avec un foyer de 3 personnes (Edmond, Laurine, Louis-Maël) qui ont tiré à eux 3 les 6 autres personnes en 2025, **cette règle devient impossible à tenir en 2026** : l'ancien code aurait échoué sans message.
+- **Nouveaux profils** : « Augustin », une carte sans compte (dans le foyer d'Edmond, Laurine et Louis-Maël), et « Maison Anne », un compte pour une maison.
+- **Idées** : la base contient 175 idées (2023 et 2024), et **aucune idée 2025** au 1er décembre 2025, bien que le code range les nouvelles idées en 2025. Les idées 2023 déjà offertes ont été supprimées (43 auparavant, 2 aujourd'hui).
+- L'année est toujours écrite en dur (`année = 2025`, une liste par année dans les modèles de page).
+
+**Dans la nouvelle version** :
+- Le calendrier est repris avec une grille de portes. Une case ne s'ouvre **qu'à partir de son jour, vérifié par le serveur**. Les cases déjà ouvertes sont cochées, et on navigue entre les jours avec des flèches.
+- L'organisateur **envoie toutes les images d'un coup depuis le site** : chaque fichier `dayN` est rangé automatiquement à la bonne date. Une case peut aussi contenir un texte.
+- Les tirages par année et leurs boucles sont repris tels quels. La règle « foyer, an dernier » est gardée, mais assouplie en dernier recours avec un message clair.
+
 ## 2. Les fonctionnalités existantes, une par une
 
 | Fonctionnalité | Ce qu'elle fait | Verdict |
@@ -76,6 +95,8 @@ Classé par **valeur réelle pour la famille**.
 - **Mobile d'abord**, interactions sans rechargement de page.
 
 ### Utile (ajouté)
+- **Aperçu automatique des liens** : l'image du produit s'affiche sur l'étiquette.
+- **Calendrier de l'Avent** (repris de 2025, voir plus haut).
 - **Lien vers le produit** et **fourchette de prix**.
 - Tableau **« Mes réservations »** : tout ce que je dois acheter, sur une seule page, avec ce qui est acheté ou non.
 - **Compte à rebours** jusqu'à Noël.
@@ -83,7 +104,6 @@ Classé par **valeur réelle pour la famille**.
 ### Plus tard (pas fait, à discuter)
 - Mode **anniversaire** (la copie `Anniv_sim`) : il suffirait d'ajouter une date d'anniversaire au profil et des « occasions » en plus de Noël.
 - Notifications par e-mail (« Isabelle a ajouté 3 idées »). Elles demandent un serveur d'e-mails.
-- Aperçu automatique des liens (image du produit).
 - Liste « cadeaux reçus / merci » après Noël.
 
 ### Détails moins importants (abandonnés)

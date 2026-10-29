@@ -100,6 +100,12 @@ TIME_ZONE = "Europe/Paris"
 USE_I18N = True
 USE_TZ = True
 
+# Fichiers envoyés (images du calendrier de l'Avent) : rangés avec la base de données.
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", Path(DATABASES["default"]["NAME"]).parent / "media"))
+MEDIA_URL = "/media/"  # non servi directement : les images passent par une vue qui vérifie la date
+DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
+
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {

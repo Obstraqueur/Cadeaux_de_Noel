@@ -10,3 +10,4 @@ staticfiles/
 nohup.out
 *.log
 .DS_Store
+media/

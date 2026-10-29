@@ -12,6 +12,8 @@ Ce projet remplace les anciens sites `Cadeaux`, `Cadeaux_mulhouse` et `Anniv_sim
 - **Années automatiques** : les idées non offertes des années passées restent proposées aux autres, et chacun peut retrouver les siennes et les « garder pour cette année ».
 - **Amis secrets en 1, 2 ou 3 boucles** : chacun offre à 1, 2 ou 3 personnes différentes. Le tirage respecte les foyers et ne donne jamais deux fois la même personne. Si possible, il évite aussi les échanges réciproques, que deux personnes d'un même foyer offrent à la même personne, et les tirages de l'an dernier. Chacun ne voit que ses propres amis secrets.
 - **« Toujours d'actualité ? »** : chaque année, on revoit ses idées non offertes : « Oui » les range de nouveau (cachées), « Modifier » permet de les corriger, « Non » les supprime.
+- **Calendrier de l'Avent** : une case par jour, qui ne s'ouvre que le jour venu. L'organisateur envoie toutes les images d'un coup depuis le site.
+- **Aperçu des liens** : l'image du produit apparaît automatiquement quand on colle un lien.
 - **Plusieurs familles** sur un seul site, chacune avec son lien d'invitation.
 - **Profils sans compte** (enfants, grands-parents) dont un parent tient la liste.
 - **Gestion** pour les organisateurs : invitations, foyers, membres, lien « mot de passe oublié ».
@@ -31,8 +33,10 @@ noel/
   templates/, static/
   management/commands/
     import_ancien_site.py   reprise des anciennes bases
+    charger_avent.py        images du calendrier de l'Avent depuis un dossier
     demo.py                 famille fictive pour essayer
-  tests.py       32 tests
+  preview.py     aperçu automatique des liens
+  tests.py       37 tests
 deploy/          service systemd et configuration nginx
 ```
 
@@ -54,13 +58,15 @@ Ouvrez http://127.0.0.1:8000. Les tests se lancent avec `python manage.py test n
 La commande lit une base de l'ancien site, sans la modifier, et la range dans une famille. **Les comptes gardent leur mot de passe actuel.** Elle peut être relancée sans créer de doublons.
 
 ```bash
-# 1. Récupérer la base À JOUR depuis le serveur actuel (celle de l'ordinateur s'arrête en 2024)
-scp ubuntu@51.20.125.129:~/Cadeaux/db.sqlite3 ancien_cadeaux.sqlite3
-scp ubuntu@51.20.125.129:~/Cadeaux_mulhouse/db_mulhouse.sqlite3 ancien_mulhouse.sqlite3
+# Famille Jean : la base 2025, puis la sauvegarde 2023-2024 (pour récupérer aussi les tirages 2024)
+python manage.py import_ancien_site Noel/Noel/Cadeaux/db.sqlite3 --famille "Famille Jean" --admin Edmond
+python manage.py import_ancien_site Noel/base_sauvgarde/db_cadeaux_copie_2023_2024.sqlite3 --famille "Famille Jean" --annee-tirages 2024
 
-# 2. Importer chaque famille
-python manage.py import_ancien_site ancien_cadeaux.sqlite3  --famille "Famille Jean" --admin Edmond
-python manage.py import_ancien_site ancien_mulhouse.sqlite3 --famille "Mulhouse"     --admin Edmond
+# Calendrier de l'Avent (ou depuis le site : Calendrier → Préparer le calendrier)
+python manage.py charger_avent Noel/Noel/Cadeaux/media/avent_images --famille "Famille Jean" --debut 2026-11-30
+
+# Plus tard, si besoin : Mulhouse
+python manage.py import_ancien_site Noel/Cadeaux_mulhouse/db_mulhouse.sqlite3 --famille "Mulhouse" --admin Edmond
 ```
 
 Options utiles :
@@ -69,7 +75,7 @@ Options utiles :
 |---|---|
 | `--admin Edmond Isabelle` | Prénoms des organisateurs (gestion, tirages). |
 | `--annee-defaut 2023` | Année des idées si l'ancienne base n'en enregistre pas (le cas de Mulhouse). |
-| `--annee-tirages 2025` | Année à donner aux anciens tirages, pour que le prochain tirage évite les mêmes personnes. |
+| `--annee-tirages 2024` | Année des anciens tirages quand la base ne l'enregistre pas (bases d'avant 2025). |
 | `--sans-tirages` | Ne pas reprendre les tirages (les anciens « essaie 1/2/3 », par exemple). |
 | `--auteur-proprietaire` | Voir ci-dessous. |
 
@@ -113,7 +119,7 @@ docker compose exec web python manage.py import_ancien_site /app/data/ancien.sql
 
 ### Sauvegarde
 
-Toutes les données tiennent dans un seul fichier : `data/cadeaux.sqlite3`. Copiez-le de temps en temps, par exemple avec `sqlite3 data/cadeaux.sqlite3 ".backup sauvegarde.sqlite3"`.
+Toutes les données sont dans le dossier `data/` : la base `cadeaux.sqlite3` et les images du calendrier dans `media/`. Copiez ce dossier de temps en temps.
 
 ## Premier lancement sans ancienne base
 

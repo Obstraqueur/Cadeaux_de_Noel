@@ -1,5 +1,6 @@
 {% load noel_tags %}<li class="tag{% if idea.favorite %} tag--fav{% endif %}{% if res %} tag--taken{% if res.is_bought %} tag--bought{% endif %}{% endif %}{% if mine or participating %} tag--mine{% endif %}{% if surprise %} tag--tiers{% endif %}" id="idea-{{ idea.pk }}"><div class="tag__paper">
   <div class="tag__body">
+    {% if idea.preview_image %}<a class="tag__thumb" href="{{ idea.url }}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><img src="{{ idea.preview_image }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.remove()"></a>{% endif %}
     <p class="tag__title">
       {% if idea.favorite %}<span class="tag__fav" title="J'en rêve">{% icon 'heart' %}</span>{% endif %}
       {{ idea.title }}

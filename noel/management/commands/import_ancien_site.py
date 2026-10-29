@@ -52,7 +52,7 @@ class Command(BaseCommand):
         parser.add_argument("--annee-defaut", type=int, default=2023,
                             help="Année des idées quand l'ancienne base n'en a pas (défaut 2023)")
         parser.add_argument("--annee-tirages", type=int, default=2024,
-                            help="Année attribuée aux anciens tirages d'amis secrets (défaut 2024)")
+                            help="Année des anciens tirages quand la base ne l'enregistre pas (défaut 2024)")
         parser.add_argument("--sans-tirages", action="store_true", help="Ne pas importer les tirages")
         parser.add_argument(
             "--auteur-proprietaire", action="store_true",
@@ -130,7 +130,9 @@ class Command(BaseCommand):
         for _, ms in sorted(groups.items()):
             if len(ms) < 2 or any(m.household_id for m in ms):
                 continue
-            h = Household.objects.create(family=family, name=" & ".join(sorted(m.name for m in ms)))
+            names = sorted(m.name for m in ms)
+            label = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " & " + names[-1]
+            h = Household.objects.create(family=family, name=label)
             Member.objects.filter(pk__in=[m.pk for m in ms]).update(household=h)
             stats["foyers"] += 1
 
@@ -164,11 +166,17 @@ class Command(BaseCommand):
                 stats["déjà offertes"] += 1
 
         # ---- tirages : dans l'ancien site, chaque « boucle » était lancée à part pour avoir
-        # 2 ou 3 amis secrets chacun. On les regroupe en un seul tirage à plusieurs boucles.
+        # 2 ou 3 amis secrets chacun. On regroupe les boucles d'une même année en un seul
+        # tirage à plusieurs boucles. Les bases 2025 ont une colonne « annee » ; sinon on
+        # utilise --annee-tirages.
         if not opts["sans_tirages"] and {"ideecadeaux_boucleamissecrets", "ideecadeaux_detailboucle"} <= tables:
-            loops = list(src.execute("select * from ideecadeaux_boucleamissecrets order by id"))
-            year = opts["annee_tirages"]
-            if loops and not Draw.objects.filter(family=family, year=year).exists():
+            has_annee = "annee" in cols("ideecadeaux_boucleamissecrets")
+            by_year = defaultdict(list)
+            for b in src.execute("select * from ideecadeaux_boucleamissecrets order by id"):
+                by_year[(b["annee"] if has_annee and b["annee"] else opts["annee_tirages"])].append(b)
+            for year, loops in sorted(by_year.items()):
+                if Draw.objects.filter(family=family, year=year).exists():
+                    continue
                 draw = Draw.objects.create(family=family, title=f"Amis secrets {year}", year=year, rounds=len(loops))
                 stats["tirages"] += 1
                 seen = set()
