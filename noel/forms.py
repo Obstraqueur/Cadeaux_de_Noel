@@ -102,11 +102,14 @@ class DrawForm(StyledMixin, forms.ModelForm):
 
     class Meta:
         model = Draw
-        fields = ["title", "budget", "participants"]
+        fields = ["title", "budget", "rounds", "participants"]
         widgets = {
             "title": forms.TextInput(attrs={"placeholder": "Ex. Amis secrets 2026"}),
             "budget": forms.TextInput(attrs={"placeholder": "Ex. 30 € (facultatif)"}),
+            "rounds": forms.Select(choices=[(1, "1 ami secret"), (2, "2 amis secrets"), (3, "3 amis secrets")]),
         }
+        labels = {"rounds": "Nombre d'amis secrets par personne"}
+        help_texts = {"rounds": "Chacun offre à autant de personnes différentes, sans doublon d'une boucle à l'autre."}
 
     def __init__(self, *args, family=None, **kwargs):
         super().__init__(*args, **kwargs)

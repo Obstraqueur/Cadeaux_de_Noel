@@ -3,7 +3,7 @@
 {% block content %}
 <header class="pagehead">
   <h1 class="pagehead__title">Amis secrets</h1>
-  <p class="pagehead__sub">Chacun tire au sort une personne à qui faire un cadeau. Personne d'autre ne connaît le résultat, pas même l'organisateur.</p>
+  <p class="pagehead__sub">Chacun tire au sort une, deux ou trois personnes à qui faire un cadeau. Personne d'autre ne connaît le résultat, pas même l'organisateur.</p>
 </header>
 
 <section class="block">
@@ -11,17 +11,19 @@
   <article class="draw{% if d.year < season %} draw--past{% endif %}">
     <div class="draw__head">
       <h2 class="draw__title">{{ d.title }}</h2>
-      <p class="draw__meta">{{ d.year }} · {{ d.n|plural:"participant" }}{% if d.budget %} · budget {{ d.budget }}{% endif %}</p>
+      <p class="draw__meta">{{ d.year }}, {% if d.rounds > 1 %}{{ d.rounds }} amis secrets par personne{% else %}1 ami secret par personne{% endif %}{% if d.budget %}, budget {{ d.budget }}{% endif %}</p>
     </div>
-    {% if d.mine %}
-      <ul class="draw__mine">
-        {% for a in d.mine %}
-        <li>
-          {% if a.giver.pk == viewer.pk %}Vous offrez à{% else %}{{ a.giver.name }} offre à{% endif %}
-          <a class="draw__who" href="{{ a.receiver.get_absolute_url }}">{% avatar a.receiver 'sm' %} {{ a.receiver.name }}</a>
-        </li>
-        {% endfor %}
-      </ul>
+    {% if d.mine_groups %}
+      {% for g in d.mine_groups %}
+      <div class="draw__mine">
+        <p>{% if g.giver.pk == viewer.pk %}Vous offrez à{% else %}{{ g.giver.name }} offre à{% endif %}</p>
+        <ul>
+          {% for r in g.receivers %}
+          <li><a class="draw__who" href="{{ r.get_absolute_url }}">{% avatar r 'sm' %} {{ r.name }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
     {% else %}
       <p class="draw__none">Vous ne participez pas à ce tirage.</p>
     {% endif %}
@@ -40,12 +42,13 @@
 <section class="block">
   <details class="panel" {% if form.errors or not draws %}open{% endif %}>
     <summary class="block__title">Lancer un nouveau tirage</summary>
-    <p class="panel__hint">Règles : on ne se tire pas soi-même, ni quelqu'un de son foyer. On évite si possible la même personne que l'an dernier et les échanges réciproques.</p>
+    <p class="panel__hint">Règles : on ne se tire pas soi-même, ni quelqu'un de son foyer, et jamais deux fois la même personne d'une boucle à l'autre. Si possible, on évite aussi les échanges réciproques, que deux personnes d'un même foyer offrent à la même personne, et les tirages de l'an dernier.</p>
     <form method="post" class="drawform">
       {% csrf_token %}
       {% if form.non_field_errors %}<div class="formerror">{{ form.non_field_errors|join:" " }}</div>{% endif %}
       <div class="field"><label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>{{ form.title }}</div>
       <div class="field"><label for="{{ form.budget.id_for_label }}">{{ form.budget.label }}</label>{{ form.budget }}</div>
+      <div class="field"><label for="{{ form.rounds.id_for_label }}">{{ form.rounds.label }}</label>{{ form.rounds }}<p class="field__help">{{ form.rounds.help_text }}</p></div>
       <fieldset class="field picks">
         <legend>Participants <button type="button" class="linkbtn" data-check-all="participants">Tout cocher / décocher</button></legend>
         {% for cb in form.participants %}

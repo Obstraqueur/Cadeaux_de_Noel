@@ -123,6 +123,30 @@ class VisibilityTests(Base):
         old.refresh_from_db()
         self.assertEqual(old.year, current_season())
 
+    def test_review_section_oui_modifier_non(self):
+        a = Idea.objects.create(recipient=self.bob, author=self.bob, title="Vieux A", year=current_season() - 1)
+        b = Idea.objects.create(recipient=self.bob, author=self.bob, title="Vieux B", year=current_season() - 1)
+        c = Idea.objects.create(recipient=self.bob, author=self.bob, title="Vieux C", year=current_season() - 1)
+        self.login(self.bob)
+        page = self.client.get(self.url("member", self.bob.pk)).content.decode()
+        self.assertIn("Toujours d'actualité", page)
+        self.assertIn("Vieux A", page)
+        # Oui : rangée (cachée) dans la liste de l'année
+        r = self.client.post(self.url("idea_keep", a.pk), {"action": "keep", "from": "review"}, HTTP_HX_REQUEST="true")
+        self.assertEqual(r.content, b"")
+        # Modifier : corrigée puis rangée
+        self.assertContains(self.client.get(self.url("idea_edit", b.pk), {"renew": 1}), "Enregistrer pour")
+        r = self.client.post(self.url("idea_edit", b.pk), {"title": "Vieux B corrigé", "renew": "1"}, HTTP_HX_REQUEST="true")
+        self.assertEqual(r.content, b"")
+        # Non : supprimée
+        self.client.post(self.url("idea_delete", c.pk), HTTP_HX_REQUEST="true")
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertEqual((a.year, b.year, b.title), (current_season(), current_season(), "Vieux B corrigé"))
+        self.assertFalse(Idea.objects.filter(pk=c.pk).exists())
+        page = self.client.get(self.url("member", self.bob.pk)).content.decode()
+        self.assertNotIn("Toujours d'actualité", page)
+        self.assertNotIn("Vieux A", page)
+
 
 class ReservationTests(Base):
     def setUp(self):
@@ -192,27 +216,49 @@ class IdeaCrudTests(Base):
 
 
 class SecretSantaTests(TestCase):
-    def test_respects_households_and_is_a_permutation(self):
+    HOUSES = {1: "a", 2: "a", 3: "b", 4: "b", 5: "c", 6: None, 7: None, 8: "d", 9: "d", 10: None}
+
+    def check(self, res, people, rounds):
+        for t in range(1, rounds + 1):
+            pairs = [(g, r) for tt, g, r in res.pairs if tt == t]
+            self.assertEqual(sorted(g for g, _ in pairs), people)
+            self.assertEqual(sorted(r for _, r in pairs), people)
+        all_pairs = [(g, r) for _, g, r in res.pairs]
+        self.assertEqual(len(all_pairs), len(set(all_pairs)), "doublon d'une boucle à l'autre")
+        for g, r in all_pairs:
+            self.assertNotEqual(g, r)
+            if self.HOUSES.get(g) is not None:
+                self.assertNotEqual(self.HOUSES[g], self.HOUSES.get(r))
+
+    def test_one_round(self):
         people = list(range(1, 10))
-        houses = {1: "a", 2: "a", 3: "b", 4: "b", 5: "c", 6: None, 7: None, 8: "d", 9: "d"}
-        for seed in range(200):
-            res = secret_santa.draw(people, houses, seed=seed)
-            givers = [g for g, _ in res.pairs]
-            receivers = [r for _, r in res.pairs]
-            self.assertEqual(sorted(givers), people)
-            self.assertEqual(sorted(receivers), people)
-            for g, r in res.pairs:
-                self.assertNotEqual(g, r)
-                if houses[g] is not None:
-                    self.assertNotEqual(houses[g], houses[r])
+        for seed in range(100):
+            self.check(secret_santa.draw(people, self.HOUSES, seed=seed), people, 1)
+
+    def test_three_rounds_all_rules(self):
+        people = list(range(1, 11))
+        for seed in range(60):
+            res = secret_santa.draw(people, self.HOUSES, rounds=3, seed=seed)
+            self.check(res, people, 3)
+            self.assertEqual(res.relaxed, [])
+            pairs = {(g, r) for _, g, r in res.pairs}
+            # pas d'échange réciproque, pas deux personnes d'un même foyer pour le même ami
+            self.assertFalse(any((r, g) in pairs for g, r in pairs))
+            for g, r in pairs:
+                for m in people:
+                    if m != g and self.HOUSES.get(g) is not None and self.HOUSES.get(m) == self.HOUSES[g]:
+                        self.assertNotIn((m, r), pairs)
 
     def test_avoids_last_year(self):
-        people = [1, 2, 3, 4, 5]
-        previous = {(1, 2), (2, 3), (3, 4), (4, 5), (5, 1)}
+        people = [1, 2, 3, 4, 5, 6, 7]
+        previous = {(1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 1)}
         for seed in range(50):
-            res = secret_santa.draw(people, {}, previous, seed=seed)
-            self.assertFalse(set(res.pairs) & previous)
-            self.assertEqual(res.relaxed, [])
+            res = secret_santa.draw(people, {}, previous, rounds=2, seed=seed)
+            self.assertFalse({(g, r) for _, g, r in res.pairs} & previous)
+
+    def test_too_many_rounds(self):
+        with self.assertRaises(secret_santa.DrawImpossible):
+            secret_santa.draw([1, 2, 3], {1: "x", 2: "x", 3: None}, rounds=2)
 
     def test_impossible(self):
         with self.assertRaises(secret_santa.DrawImpossible):
@@ -223,7 +269,7 @@ class DrawViewTests(Base):
     def test_admin_draws_and_each_sees_only_own(self):
         self.login(self.alice)
         r = self.client.post(self.url("draws"), {
-            "title": "Amis secrets", "budget": "30 €",
+            "title": "Amis secrets", "budget": "30 €", "rounds": 1,
             "participants": [m.pk for m in (self.alice, self.bob, self.isa, self.fred)],
         })
         self.assertEqual(r.status_code, 302)
@@ -234,6 +280,17 @@ class DrawViewTests(Base):
         html = self.client.get(self.url("draws")).content.decode()
         self.assertIn(mine.receiver.name, html)
         self.assertEqual(html.count("Vous offrez à"), 1)
+
+    def test_two_rounds_view(self):
+        extra = [self._member(n) for n in ("Carla", "David")]
+        self.login(self.alice)
+        self.client.post(self.url("draws"), {
+            "title": "Boucles", "rounds": 2,
+            "participants": [m.pk for m in (self.alice, self.bob, self.isa, self.fred, *extra)],
+        })
+        draw = Draw.objects.get()
+        self.assertEqual(draw.assignments.count(), 12)
+        self.assertEqual(draw.assignments.filter(giver=self.bob).count(), 2)
 
     def test_non_admin_cannot_draw(self):
         self.login(self.bob)
@@ -298,6 +355,7 @@ class ImportTests(TestCase):
         self.assertTrue(fam.members.get(name="Edmond").is_admin)
         self.assertEqual(Household.objects.get().members.count(), 2)
         self.assertEqual(Assignment.objects.count(), 2)
+        self.assertEqual(Draw.objects.get().rounds, 1)
         self.assertEqual(User.objects.get(username="Edmond").password, "pbkdf2_sha256$1$x$y")
         self.assertIsNone(fam.members.get(name="Frederic").user)
         self.assertLessEqual(len(Idea.objects.get(recipient__name="Frederic").title), 112)

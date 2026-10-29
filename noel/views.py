@@ -205,7 +205,12 @@ def family(request, slug):
         Assignment.objects.filter(draw__family=family, draw__year=season)
         .filter(Q(giver=viewer) | Q(giver__in=managed))
         .select_related("draw", "giver", "receiver")
+        .order_by("draw__created_at", "giver__name", "round")
     )
+    santa_groups = {}
+    for a in my_assignments:
+        g = santa_groups.setdefault((a.draw_id, a.giver_id), {"draw": a.draw, "giver": a.giver, "receivers": []})
+        g["receivers"].append(a.receiver)
     my_res = Reservation.objects.filter(
         Q(owner=viewer) | Q(participants=viewer), idea__recipient__family=family, idea__year__gte=season
     ).distinct()
@@ -217,7 +222,7 @@ def family(request, slug):
         "me": me,
         "managed": managed,
         "others": others,
-        "assignments": my_assignments,
+        "santa_groups": list(santa_groups.values()),
         "res_total": my_res.count(),
         "res_todo": my_res.exclude(status=Reservation.BOUGHT).count(),
         "my_ideas_count": my_ideas_count,
@@ -261,6 +266,7 @@ def member(request, slug, member_id):
         "taken": [] if owner_view else taken,
         "older": [] if owner_view else ctx_list(older),
         "own_count": visibility.own_count(recipient) if owner_view else 0,
+        "review": list(older) if owner_view else [],
         "form": IdeaForm(),
         "season": current_season(),
         "santa_for": santa_for,
@@ -308,18 +314,30 @@ def idea_edit(request, slug, idea_id):
     idea = get_object_or_404(Idea.objects.select_related("recipient", "author"), pk=idea_id, recipient__family=family)
     if not can_edit_idea(idea, viewer, request.user):
         raise PermissionDenied
+    # « Toujours d'actualité ? » → Modifier : l'idée est corrigée puis rangée dans la liste de l'année.
+    renew = bool(request.GET.get("renew") or request.POST.get("renew"))
     if request.method == "POST":
         if "cancel" in request.POST:
+            if renew:
+                return render(request, "noel/partials/review_item.html", {"idea": idea, "family": family})
             return render_idea(request, idea, viewer)
         form = IdeaForm(request.POST, instance=idea)
         if form.is_valid():
-            form.save()
+            idea = form.save(commit=False)
+            if renew:
+                idea.year = current_season()
+            idea.save()
             if is_htmx(request):
+                if renew:
+                    return toast(HttpResponse(""), f"Modifiée et rangée dans votre liste {idea.year}",
+                                 **{"count-changed": True})
                 return render_idea(request, idea, viewer, "Idée modifiée")
             return redirect(idea.recipient)
     else:
         form = IdeaForm(instance=idea)
-    return render(request, "noel/partials/idea_edit.html", {"form": form, "idea": idea, "family": family})
+    return render(request, "noel/partials/idea_edit.html", {
+        "form": form, "idea": idea, "family": family, "renew": renew, "season": current_season(),
+    })
 
 
 @login_required
@@ -355,7 +373,9 @@ def idea_keep(request, slug, idea_id):
     if action == "keep":
         idea.year = current_season()
         idea.save(update_fields=["year", "updated_at"])
-        msg = f"Remise dans la liste {idea.year}"
+        msg = f"Rangée dans votre liste {idea.year}"
+        if is_htmx(request) and request.POST.get("from") == "review":
+            return toast(HttpResponse(""), msg, **{"count-changed": True})
         if is_htmx(request):
             idea = Idea.objects.select_related("recipient", "author").get(pk=idea.pk)
             resp = render_idea(request, idea, viewer)
@@ -450,7 +470,8 @@ def my_reservations(request, slug):
 def draws(request, slug):
     family, viewer = family_and_viewer(request, slug)
     form = DrawForm(request.POST or None, family=family,
-                    initial={"title": f"Amis secrets {current_season()}", "participants": family.members.all()})
+                    initial={"title": f"Amis secrets {current_season()}", "rounds": 3,
+                             "participants": family.members.all()})
     if request.method == "POST":
         require_admin(viewer)
         if form.is_valid():
@@ -459,7 +480,8 @@ def draws(request, slug):
             last = Draw.objects.filter(family=family, year=current_season() - 1)
             previous = set(Assignment.objects.filter(draw__in=last).values_list("giver_id", "receiver_id"))
             try:
-                result = secret_santa.draw([m.pk for m in participants], households, previous)
+                result = secret_santa.draw([m.pk for m in participants], households, previous,
+                                            rounds=form.cleaned_data["rounds"])
             except secret_santa.DrawImpossible as e:
                 form.add_error(None, str(e))
             else:
@@ -468,7 +490,7 @@ def draws(request, slug):
                     d.family, d.created_by, d.year = family, viewer, current_season()
                     d.save()
                     Assignment.objects.bulk_create(
-                        [Assignment(draw=d, giver_id=g, receiver_id=r) for g, r in result.pairs]
+                        [Assignment(draw=d, round=t, giver_id=g, receiver_id=r) for t, g, r in result.pairs]
                     )
                 text = "Tirage effectué ! Chacun découvre son ami secret sur l'accueil."
                 if result.relaxed:
@@ -490,6 +512,11 @@ def draws(request, slug):
             )
         )
     )
+    for d in all_draws:
+        groups = {}
+        for a in d.mine:
+            groups.setdefault(a.giver_id, {"giver": a.giver, "receivers": []})["receivers"].append(a.receiver)
+        d.mine_groups = list(groups.values())
     return render(request, "noel/draws.html", {
         "family": family, "viewer": viewer, "form": form, "draws": all_draws, "season": current_season(),
     })

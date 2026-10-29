@@ -10,7 +10,7 @@ Ce qui est repris :
   - une personne par « carte » (bloc), reliée à son compte ;
   - les foyers (numéro de groupe de l'ancien site) ;
   - les idées, avec leur année ; « fait » devient une réservation « acheté » ;
-  - les tirages d'amis secrets.
+  - les tirages d'amis secrets (les boucles de l'ancien site deviennent un tirage à plusieurs boucles).
 
 La commande peut être relancée sans créer de doublons.
 """
@@ -163,19 +163,24 @@ class Command(BaseCommand):
                 Reservation.objects.create(idea=idea, owner=None, status=Reservation.BOUGHT)
                 stats["déjà offertes"] += 1
 
-        # ---- tirages
+        # ---- tirages : dans l'ancien site, chaque « boucle » était lancée à part pour avoir
+        # 2 ou 3 amis secrets chacun. On les regroupe en un seul tirage à plusieurs boucles.
         if not opts["sans_tirages"] and {"ideecadeaux_boucleamissecrets", "ideecadeaux_detailboucle"} <= tables:
-            for b in src.execute("select * from ideecadeaux_boucleamissecrets"):
-                title = (b["titre_boucle"] or "Amis secrets").strip()
-                draw, created = Draw.objects.get_or_create(family=family, title=title, year=opts["annee_tirages"])
-                if not created:
-                    continue
+            loops = list(src.execute("select * from ideecadeaux_boucleamissecrets order by id"))
+            year = opts["annee_tirages"]
+            if loops and not Draw.objects.filter(family=family, year=year).exists():
+                draw = Draw.objects.create(family=family, title=f"Amis secrets {year}", year=year, rounds=len(loops))
                 stats["tirages"] += 1
-                seen_g, seen_r = set(), set()
-                for d in src.execute("select * from ideecadeaux_detailboucle where boucle_amis_secrets_id = ?", (b["id"],)):
-                    g = members_by_name.get((d["titre_bloc"] or "").strip().lower())
-                    r = members_by_name.get((d["ami_secret"] or "").strip().lower())
-                    if g and r and g.pk not in seen_g and r.pk not in seen_r:
-                        Assignment.objects.create(draw=draw, giver=g, receiver=r)
-                        seen_g.add(g.pk); seen_r.add(r.pk)
+                seen = set()
+                for t, b in enumerate(loops, start=1):
+                    seen_g, seen_r = set(), set()
+                    for d in src.execute(
+                        "select * from ideecadeaux_detailboucle where boucle_amis_secrets_id = ?", (b["id"],)
+                    ):
+                        g = members_by_name.get((d["titre_bloc"] or "").strip().lower())
+                        r = members_by_name.get((d["ami_secret"] or "").strip().lower())
+                        if g and r and g.pk not in seen_g and r.pk not in seen_r and (g.pk, r.pk) not in seen:
+                            Assignment.objects.create(draw=draw, round=t, giver=g, receiver=r)
+                            seen_g.add(g.pk); seen_r.add(r.pk); seen.add((g.pk, r.pk))
+                stats["boucles"] += len(loops)
         return dict(stats)

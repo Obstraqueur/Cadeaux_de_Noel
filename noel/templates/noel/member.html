@@ -44,6 +44,17 @@
   </div>
   <div id="search-results" aria-live="polite"></div>
 </section>
+
+{% if review %}
+<section class="block review-block">
+  <h2 class="block__title">Toujours d'actualité ? <span class="count">{{ review|length }}</span></h2>
+  <p class="older__hint">Ces idées des années passées n'ont pas été offertes. Ça vous fait toujours envie ?
+    « Oui » la range dans votre liste {{ season }}, « Modifier » permet de la corriger avant, « Non » la supprime.</p>
+  <ul class="tags">
+    {% for idea in review %}{% include 'noel/partials/review_item.html' %}{% endfor %}
+  </ul>
+</section>
+{% endif %}
 {% else %}
 <section class="adder">
   <details class="adder__box">

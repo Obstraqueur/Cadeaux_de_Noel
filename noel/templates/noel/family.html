@@ -32,13 +32,15 @@
   </a>
   {% endif %}
 
-  {% for a in assignments %}
-  <a class="santa" href="{{ a.receiver.get_absolute_url }}">
-    <span class="santa__label">{{ a.draw.title }}{% if a.giver.pk != viewer.pk %} · pour {{ a.giver.name }}{% endif %}</span>
-    <span class="santa__name">{% if a.giver.pk == viewer.pk %}Vous offrez à {{ a.receiver.name }}{% else %}{{ a.giver.name }} offre à {{ a.receiver.name }}{% endif %}</span>
-    {% if a.draw.budget %}<span class="santa__budget">Budget conseillé : {{ a.draw.budget }}</span>{% endif %}
-    <span class="santa__hint">Voir sa liste</span>
-  </a>
+  {% for g in santa_groups %}
+  <div class="santa">
+    <span class="santa__label">{{ g.draw.title }}{% if g.giver.pk != viewer.pk %}, pour {{ g.giver.name }}{% endif %}</span>
+    <span class="santa__name">{% if g.giver.pk == viewer.pk %}Vous offrez à{% else %}{{ g.giver.name }} offre à{% endif %}</span>
+    <span class="santa__list">
+      {% for r in g.receivers %}<a class="santa__who" href="{{ r.get_absolute_url }}">{% avatar r 'sm' %} {{ r.name }}</a>{% endfor %}
+    </span>
+    {% if g.draw.budget %}<span class="santa__budget">Budget conseillé : {{ g.draw.budget }} par cadeau</span>{% endif %}
+  </div>
   {% endfor %}
 </section>
 

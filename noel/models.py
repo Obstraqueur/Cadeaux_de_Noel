@@ -206,6 +206,10 @@ class Draw(models.Model):
     title = models.CharField("nom du tirage", max_length=100)
     year = models.PositiveIntegerField("année", default=current_season)
     budget = models.CharField("budget conseillé", max_length=40, blank=True)
+    rounds = models.PositiveSmallIntegerField(
+        "amis secrets par personne", default=1,
+        help_text="Nombre de boucles : chacun offre à autant de personnes différentes.",
+    )
     created_by = models.ForeignKey(Member, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -220,14 +224,17 @@ class Draw(models.Model):
 
 class Assignment(models.Model):
     draw = models.ForeignKey(Draw, on_delete=models.CASCADE, related_name="assignments")
+    round = models.PositiveSmallIntegerField("boucle", default=1)
     giver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="gives_to")
     receiver = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="receives_from")
 
     class Meta:
         verbose_name = "attribution"
+        ordering = ["round"]
         constraints = [
-            models.UniqueConstraint(fields=["draw", "giver"], name="un_cadeau_par_personne"),
-            models.UniqueConstraint(fields=["draw", "receiver"], name="un_ami_secret_par_personne"),
+            models.UniqueConstraint(fields=["draw", "round", "giver"], name="un_cadeau_par_personne_et_boucle"),
+            models.UniqueConstraint(fields=["draw", "round", "receiver"], name="un_ami_secret_par_personne_et_boucle"),
+            models.UniqueConstraint(fields=["draw", "giver", "receiver"], name="pas_deux_fois_la_meme_personne"),
         ]
 
     def __str__(self):

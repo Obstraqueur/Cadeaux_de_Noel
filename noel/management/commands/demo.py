@@ -56,9 +56,11 @@ class Command(BaseCommand):
 
         if not Draw.objects.filter(family=fam, year=y).exists():
             members = list(people.values())
-            result = secret_santa.draw([m.pk for m in members], {m.pk: m.household_id for m in members})
-            d = Draw.objects.create(family=fam, title=f"Amis secrets {y}", budget="30 €", year=y, created_by=people["Marie"])
-            Assignment.objects.bulk_create([Assignment(draw=d, giver_id=g, receiver_id=r) for g, r in result.pairs])
+            result = secret_santa.draw([m.pk for m in members], {m.pk: m.household_id for m in members}, rounds=2)
+            d = Draw.objects.create(family=fam, title=f"Amis secrets {y}", budget="30 €", year=y, rounds=2,
+                                   created_by=people["Marie"])
+            Assignment.objects.bulk_create(
+                [Assignment(draw=d, round=t, giver_id=g, receiver_id=r) for t, g, r in result.pairs])
 
         self.stdout.write(self.style.SUCCESS(
             f"Famille de démo prête. Connectez-vous avec Marie, Paul, Léa ou Tom (mot de passe : {PASSWORD})."))

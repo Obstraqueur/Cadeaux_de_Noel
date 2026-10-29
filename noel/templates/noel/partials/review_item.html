@@ -1,0 +1,12 @@
+{% load noel_tags %}<li class="tag tag--older" id="idea-{{ idea.pk }}"><div class="tag__paper">
+  <div class="tag__body">
+    <p class="tag__title">{{ idea.title }}</p>
+    {% if idea.details %}<p class="tag__details">{{ idea.details|linebreaksbr }}</p>{% endif %}
+    <p class="tag__meta"><span class="chip">Idée de {{ idea.year }}</span>{% if idea.price %}<span class="chip">{{ idea.price }}</span>{% endif %}</p>
+  </div>
+  <div class="tag__actions review">
+    <button class="btn btn--small btn--primary" hx-post="{% url 'idea_keep' family.slug idea.pk %}" hx-vals='{"action": "keep", "from": "review"}' hx-target="closest li" hx-swap="outerHTML swap:250ms">{% icon 'check' %} Oui</button>
+    <button class="btn btn--small" hx-get="{% url 'idea_edit' family.slug idea.pk %}?renew=1" hx-target="closest li" hx-swap="outerHTML">{% icon 'edit' %} Modifier</button>
+    <button class="btn btn--small btn--ghost" hx-post="{% url 'idea_delete' family.slug idea.pk %}" hx-target="closest li" hx-swap="outerHTML swap:250ms">Non</button>
+  </div>
+</div></li>

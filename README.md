@@ -10,11 +10,12 @@ Ce projet remplace les anciens sites `Cadeaux`, `Cadeaux_mulhouse` et `Anniv_sim
 - **Les listes des autres** : réserver (« Je m'en occupe »), marquer comme acheté, **participer à plusieurs** à un gros cadeau, ou **suggérer une idée**, marquée « Suggestion d'un tiers » et invisible pour la personne.
 - **À acheter** : tout ce dont je m'occupe, avec une case à cocher une fois l'achat fait.
 - **Années automatiques** : les idées non offertes des années passées restent proposées aux autres, et chacun peut retrouver les siennes et les « garder pour cette année ».
-- **Amis secrets** : tirage au sort qui respecte les foyers, évite la personne de l'an dernier et les échanges réciproques. Chacun ne voit que sa propre personne.
+- **Amis secrets en 1, 2 ou 3 boucles** : chacun offre à 1, 2 ou 3 personnes différentes. Le tirage respecte les foyers et ne donne jamais deux fois la même personne. Si possible, il évite aussi les échanges réciproques, que deux personnes d'un même foyer offrent à la même personne, et les tirages de l'an dernier. Chacun ne voit que ses propres amis secrets.
+- **« Toujours d'actualité ? »** : chaque année, on revoit ses idées non offertes : « Oui » les range de nouveau (cachées), « Modifier » permet de les corriger, « Non » les supprime.
 - **Plusieurs familles** sur un seul site, chacune avec son lien d'invitation.
 - **Profils sans compte** (enfants, grands-parents) dont un parent tient la liste.
 - **Gestion** pour les organisateurs : invitations, foyers, membres, lien « mot de passe oublié ».
-- Pensé pour le téléphone, avec un thème clair ou sombre automatique et une neige qu'on peut couper.
+- Pensé pour le téléphone, avec un thème clair aux couleurs de Noël et une neige qu'on peut couper.
 
 ## Technique
 
@@ -31,7 +32,7 @@ noel/
   management/commands/
     import_ancien_site.py   reprise des anciennes bases
     demo.py                 famille fictive pour essayer
-  tests.py       28 tests
+  tests.py       32 tests
 deploy/          service systemd et configuration nginx
 ```
 
@@ -122,8 +123,8 @@ Toutes les données tiennent dans un seul fichier : `data/cadeaux.sqlite3`. Copi
 
 ## Captures (données fictives)
 
-| Accueil | Réservation | Thème sombre |
+| Accueil | Réservation | Ma liste (cachée) |
 |---|---|---|
-| ![](docs/captures/02-accueil-mobile.png) | ![](docs/captures/04-apres-reservation.png) | ![](docs/captures/12-jules-sombre.png) |
+| ![](docs/captures/02-accueil-mobile.png) | ![](docs/captures/04-apres-reservation.png) | ![](docs/captures/21-recherche.png) |
 
 ![Liste sur ordinateur](docs/captures/10-liste-desktop.png)
