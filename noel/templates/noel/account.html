@@ -1,0 +1,22 @@
+{% extends 'noel/base.html' %}
+{% block title %}Mon compte · Cadeaux de Noël{% endblock %}
+{% block content %}
+<header class="pagehead">
+  <h1 class="pagehead__title">Mon compte</h1>
+  <p class="pagehead__sub">Vous vous connectez avec « {{ user.username }} ».</p>
+</header>
+<section class="block panel">
+  <h2 class="block__title">Profil</h2>
+  <form method="post" class="stack">{% csrf_token %}
+    {% include 'noel/partials/fields.html' with form=info %}
+    <button class="btn btn--primary" name="save_info" value="1">Enregistrer</button>
+  </form>
+</section>
+<section class="block panel">
+  <h2 class="block__title">Changer de mot de passe</h2>
+  <form method="post" class="stack">{% csrf_token %}
+    {% include 'noel/partials/fields.html' with form=pwd %}
+    <button class="btn btn--primary" name="save_pwd" value="1">Changer le mot de passe</button>
+  </form>
+</section>
+{% endblock %}

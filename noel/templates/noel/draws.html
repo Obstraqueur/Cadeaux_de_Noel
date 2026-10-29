@@ -1,0 +1,61 @@
+{% extends 'noel/base.html' %}{% load noel_tags %}
+{% block title %}Amis secrets · Cadeaux de Noël{% endblock %}
+{% block content %}
+<header class="pagehead">
+  <h1 class="pagehead__title">Amis secrets</h1>
+  <p class="pagehead__sub">Chacun tire au sort une personne à qui faire un cadeau. Personne d'autre ne connaît le résultat, pas même l'organisateur.</p>
+</header>
+
+<section class="block">
+  {% for d in draws %}
+  <article class="draw{% if d.year < season %} draw--past{% endif %}">
+    <div class="draw__head">
+      <h2 class="draw__title">{{ d.title }}</h2>
+      <p class="draw__meta">{{ d.year }} · {{ d.n|plural:"participant" }}{% if d.budget %} · budget {{ d.budget }}{% endif %}</p>
+    </div>
+    {% if d.mine %}
+      <ul class="draw__mine">
+        {% for a in d.mine %}
+        <li>
+          {% if a.giver.pk == viewer.pk %}Vous offrez à{% else %}{{ a.giver.name }} offre à{% endif %}
+          <a class="draw__who" href="{{ a.receiver.get_absolute_url }}">{% avatar a.receiver 'sm' %} {{ a.receiver.name }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="draw__none">Vous ne participez pas à ce tirage.</p>
+    {% endif %}
+    {% if viewer.is_admin %}
+    <form method="post" action="{% url 'draw_delete' family.slug d.pk %}" data-confirm="Supprimer le tirage « {{ d.title }} » ? Chacun perdra son ami secret.">
+      {% csrf_token %}<button class="btn btn--small btn--ghost" type="submit">Supprimer ce tirage</button>
+    </form>
+    {% endif %}
+  </article>
+  {% empty %}
+  <div class="empty"><p>Aucun tirage pour l'instant.{% if not viewer.is_admin %} Un organisateur de la famille peut en lancer un.{% endif %}</p></div>
+  {% endfor %}
+</section>
+
+{% if viewer.is_admin %}
+<section class="block">
+  <details class="panel" {% if form.errors or not draws %}open{% endif %}>
+    <summary class="block__title">Lancer un nouveau tirage</summary>
+    <p class="panel__hint">Règles : on ne se tire pas soi-même, ni quelqu'un de son foyer. On évite si possible la même personne que l'an dernier et les échanges réciproques.</p>
+    <form method="post" class="drawform">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="formerror">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+      <div class="field"><label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>{{ form.title }}</div>
+      <div class="field"><label for="{{ form.budget.id_for_label }}">{{ form.budget.label }}</label>{{ form.budget }}</div>
+      <fieldset class="field picks">
+        <legend>Participants <button type="button" class="linkbtn" data-check-all="participants">Tout cocher / décocher</button></legend>
+        {% for cb in form.participants %}
+          <label class="pick">{{ cb.tag }} <span>{{ cb.choice_label }}</span></label>
+        {% endfor %}
+        {% for e in form.participants.errors %}<p class="field__error">{{ e }}</p>{% endfor %}
+      </fieldset>
+      <button class="btn btn--primary" type="submit">{% icon 'dice' %} Tirer au sort</button>
+    </form>
+  </details>
+</section>
+{% endif %}
+{% endblock %}

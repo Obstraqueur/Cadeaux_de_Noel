@@ -1,0 +1,14 @@
+# /etc/systemd/system/cadeaux.service — remplace « nohup gunicorn & »
+[Unit]
+Description=Cadeaux de Noël (gunicorn)
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Cadeaux_de_Noel
+EnvironmentFile=/home/ubuntu/Cadeaux_de_Noel/.env
+ExecStart=/home/ubuntu/Cadeaux_de_Noel/.venv/bin/gunicorn config.wsgi -c gunicorn.conf.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

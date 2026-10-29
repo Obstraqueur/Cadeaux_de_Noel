@@ -1,0 +1,100 @@
+{% extends 'noel/base.html' %}{% load noel_tags %}
+{% block title %}{% if owner_view %}Ma liste{% else %}{{ recipient.name }}{% endif %} · Cadeaux de Noël{% endblock %}
+{% block content %}
+<a class="back" href="{{ family.get_absolute_url }}">{% icon 'arrow-left' %} Accueil</a>
+
+<header class="listhead">
+  {% avatar recipient 'xl' %}
+  <div>
+    <h1 class="listhead__title">{% if owner_view %}Ma liste {{ season }}{% else %}{{ recipient.name }}{% endif %}</h1>
+    <p class="listhead__sub">
+      {% if owner_view %}
+        Les autres voient cette liste. Vous ne verrez jamais ce qu'ils réservent ni les surprises qu'ils ajoutent.
+      {% elif can_add_own %}
+        Vous tenez la liste de {{ recipient.name }}. Vous voyez aussi ce que les autres ont réservé.
+      {% else %}
+        Réservez une idée pour éviter les doublons. {{ recipient.name }} ne verra rien.
+      {% endif %}
+    </p>
+  </div>
+</header>
+
+{% if santa_for %}
+<p class="notice notice--santa">{% icon 'dice' %} {{ recipient.name }} est votre ami secret ({{ santa_for.draw.title }}{% if santa_for.draw.budget %}, budget {{ santa_for.draw.budget }}{% endif %}).</p>
+{% endif %}
+
+<section class="adder">
+  <details class="adder__box" {% if owner_view and not items %}open{% endif %}>
+    <summary class="btn btn--primary btn--block">{% icon 'plus' %}
+      {% if owner_view or can_add_own %}Ajouter une idée{% else %}Suggérer une idée pour {{ recipient.name }}{% endif %}
+    </summary>
+    {% include 'noel/partials/idea_form.html' %}
+  </details>
+  {% if not owner_view and not can_add_own %}
+    <p class="adder__hint">{% icon 'eye-off' %} Vos suggestions restent invisibles pour {{ recipient.name }}.</p>
+  {% endif %}
+</section>
+
+<section class="block">
+  {% if not owner_view %}<h2 class="block__title">Idées disponibles</h2>{% endif %}
+  <ul class="tags" id="ideas">
+    {% for c in items %}{% include 'noel/partials/idea.html' with idea=c.idea res=c.res mine=c.mine participating=c.participating can_edit=c.can_edit surprise=c.surprise %}{% endfor %}
+  </ul>
+  <div class="empty empty--list">
+    {% if owner_view %}<p>Votre liste est vide. Une idée, même vague, aide beaucoup : « un livre de cuisine », « des gants chauds »…</p>
+    {% else %}<p>Aucune idée libre pour l'instant. Suggérez-en une ci-dessus.</p>{% endif %}
+  </div>
+</section>
+
+{% if taken %}
+<section class="block">
+  <h2 class="block__title">Déjà réservées</h2>
+  <ul class="tags tags--taken">
+    {% for c in taken %}{% include 'noel/partials/idea.html' with idea=c.idea res=c.res mine=c.mine participating=c.participating can_edit=c.can_edit surprise=c.surprise %}{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if older %}
+<section class="block">
+  <details class="older" {% if owner_view %}open{% endif %}>
+    <summary class="block__title">
+      {% if owner_view %}Toujours d'actualité ?{% else %}Idées des années précédentes{% endif %}
+      <span class="count">{{ older|length }}</span>
+    </summary>
+    <p class="older__hint">
+      {% if owner_view %}Ces idées des années passées n'ont pas été offertes. Gardez celles qui vous font encore envie.
+      {% else %}Jamais offertes. Elles peuvent encore faire plaisir, mais vérifiez qu'elles sont toujours d'actualité.{% endif %}
+    </p>
+    <ul class="tags tags--older">
+      {% for c in older %}
+      <li class="tag tag--older" id="idea-{{ c.idea.pk }}"><div class="tag__paper">
+        <div class="tag__body">
+          <p class="tag__title">{{ c.idea.title }}</p>
+          {% if c.idea.details %}<p class="tag__details">{{ c.idea.details|linebreaksbr }}</p>{% endif %}
+          <p class="tag__meta"><span class="chip">{{ c.idea.year }}</span></p>
+        </div>
+        <div class="tag__actions">
+          {% if owner_view or c.can_edit %}
+          <form hx-post="{% url 'idea_keep' family.slug c.idea.pk %}" hx-target="closest li" hx-swap="outerHTML swap:250ms">
+            <input type="hidden" name="action" value="keep">
+            <button class="btn btn--small" type="submit">{% icon 'check' %} Garder pour {{ season }}</button>
+          </form>
+          <form hx-post="{% url 'idea_keep' family.slug c.idea.pk %}" hx-target="closest li" hx-swap="outerHTML swap:250ms">
+            <input type="hidden" name="action" value="archive">
+            <button class="btn btn--small btn--ghost" type="submit">Retirer</button>
+          </form>
+          {% endif %}
+          {% if not owner_view %}
+          <form hx-post="{% url 'reservation' family.slug c.idea.pk 'reserve' %}" hx-target="closest li" hx-swap="outerHTML">
+            <button class="btn btn--small" type="submit">Je m'en occupe</button>
+          </form>
+          {% endif %}
+        </div>
+      </div></li>
+      {% endfor %}
+    </ul>
+  </details>
+</section>
+{% endif %}
+{% endblock %}

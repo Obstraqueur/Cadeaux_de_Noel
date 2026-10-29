@@ -1,0 +1,14 @@
+{% load noel_tags %}<li class="row{% if res.is_bought %} row--done{% endif %}" id="res-{{ idea.pk }}">
+  <button class="check" hx-post="{% url 'reservation' family.slug idea.pk 'bought' %}" hx-vals='{"context": "reservations"}'
+          hx-target="closest li" hx-swap="outerHTML" aria-pressed="{% if res.is_bought %}true{% else %}false{% endif %}"
+          aria-label="{% if res.is_bought %}Marquer comme pas encore acheté{% else %}Marquer comme acheté{% endif %}">{% icon 'check' %}</button>
+  <div class="row__body">
+    <p class="row__title">{{ idea.title }}</p>
+    <p class="row__meta">
+      Pour <a href="{{ idea.recipient.get_absolute_url }}">{{ idea.recipient.name }}</a>
+      {% if idea.price %}<span class="chip">{{ idea.price }}</span>{% endif %}
+      {% if idea.url %}<a class="chip chip--link" href="{{ idea.url }}" target="_blank" rel="noopener noreferrer">{% icon 'link' %} {{ idea.url|domain }}</a>{% endif %}
+      {% if not mine %}<span class="chip">avec {{ res.owner.name|default:"quelqu'un" }}</span>{% endif %}
+    </p>
+  </div>
+</li>

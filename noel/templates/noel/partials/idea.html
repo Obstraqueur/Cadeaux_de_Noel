@@ -1,0 +1,48 @@
+{% load noel_tags %}<li class="tag{% if idea.favorite %} tag--fav{% endif %}{% if res %} tag--taken{% if res.is_bought %} tag--bought{% endif %}{% endif %}{% if mine or participating %} tag--mine{% endif %}" id="idea-{{ idea.pk }}"><div class="tag__paper">
+  <div class="tag__body">
+    <p class="tag__title">
+      {% if idea.favorite %}<span class="tag__fav" title="J'en rêve">{% icon 'heart' %}</span>{% endif %}
+      {{ idea.title }}
+    </p>
+    {% if idea.details %}<p class="tag__details">{{ idea.details|linebreaksbr }}</p>{% endif %}
+    <p class="tag__meta">
+      {% if idea.url %}<a class="chip chip--link" href="{{ idea.url }}" target="_blank" rel="noopener noreferrer">{% icon 'link' %} {{ idea.url|domain }}</a>{% endif %}
+      {% if idea.price %}<span class="chip">{{ idea.price }}</span>{% endif %}
+      {% if idea.year < season %}<span class="chip">Idée de {{ idea.year }}</span>{% endif %}
+      {% if surprise %}<span class="chip chip--surprise" title="{{ idea.recipient.name }} ne voit pas cette idée">{% icon 'eye-off' %} Suggestion{% if idea.author %} de {{ idea.author.name }}{% endif %}</span>{% endif %}
+    </p>
+  </div>
+
+  {% if not owner_view %}
+  <div class="tag__status">
+    {% if res %}
+      <p class="stamp{% if res.is_bought %} stamp--bought{% endif %}">
+        {% if res.is_bought %}Acheté{% else %}Réservé{% endif %}
+        par {% if mine %}vous{% else %}{{ res.owner.name|default:"quelqu'un" }}{% endif %}{% with n=res.participants.count %}{% if n %} + {{ n }}{% endif %}{% endwith %}
+      </p>
+      {% with ps=res.participants.all %}{% if ps %}<p class="tag__with">Avec {% for p in ps %}{% if p.pk == viewer.pk %}vous{% else %}{{ p.name }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}{% endwith %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="tag__actions">
+    {% if not owner_view %}
+      {% if not res %}
+        <button class="btn btn--small btn--primary" hx-post="{% url 'reservation' family.slug idea.pk 'reserve' %}" hx-target="closest li" hx-swap="outerHTML">Je m'en occupe</button>
+      {% elif mine %}
+        <button class="btn btn--small{% if not res.is_bought %} btn--primary{% endif %}" hx-post="{% url 'reservation' family.slug idea.pk 'bought' %}" hx-target="closest li" hx-swap="outerHTML">{% if res.is_bought %}Pas encore acheté{% else %}{% icon 'check' %} C'est acheté{% endif %}</button>
+        <button class="btn btn--small btn--ghost" hx-post="{% url 'reservation' family.slug idea.pk 'release' %}" hx-target="closest li" hx-swap="outerHTML">Annuler</button>
+      {% elif participating %}
+        <button class="btn btn--small btn--ghost" hx-post="{% url 'reservation' family.slug idea.pk 'leave' %}" hx-target="closest li" hx-swap="outerHTML">Ne plus participer</button>
+      {% elif not res.is_bought %}
+        <button class="btn btn--small" hx-post="{% url 'reservation' family.slug idea.pk 'join' %}" hx-target="closest li" hx-swap="outerHTML" title="Pour un cadeau à plusieurs">{% icon 'users' %} Participer</button>
+      {% endif %}
+    {% endif %}
+    {% if can_edit %}
+      <span class="tag__tools">
+        <button class="iconbtn iconbtn--small" hx-get="{% url 'idea_edit' family.slug idea.pk %}" hx-target="closest li" hx-swap="outerHTML" aria-label="Modifier">{% icon 'edit' %}</button>
+        <button class="iconbtn iconbtn--small" hx-post="{% url 'idea_delete' family.slug idea.pk %}" hx-target="closest li" hx-swap="outerHTML swap:250ms" hx-confirm="Supprimer « {{ idea.title|truncatechars:60 }} » ?" aria-label="Supprimer">{% icon 'trash' %}</button>
+      </span>
+    {% endif %}
+  </div>
+</div></li>

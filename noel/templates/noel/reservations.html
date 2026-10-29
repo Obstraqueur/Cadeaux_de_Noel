@@ -1,0 +1,22 @@
+{% extends 'noel/base.html' %}{% load noel_tags %}
+{% block title %}À acheter · Cadeaux de Noël{% endblock %}
+{% block content %}
+<header class="pagehead">
+  <h1 class="pagehead__title">À acheter</h1>
+  <p class="pagehead__sub">Les cadeaux dont vous vous occupez. Cochez-les une fois achetés.</p>
+</header>
+
+{% if todo or done %}
+<section class="block">
+  <ul class="rows">
+    {% for c in todo %}{% include 'noel/partials/reservation_row.html' with idea=c.idea res=c.res mine=c.mine %}{% endfor %}
+    {% for c in done %}{% include 'noel/partials/reservation_row.html' with idea=c.idea res=c.res mine=c.mine %}{% endfor %}
+  </ul>
+</section>
+{% else %}
+<div class="empty">
+  <p>Vous n'avez encore rien réservé. Ouvrez la liste de quelqu'un et choisissez « Je m'en occupe ».</p>
+  <a class="btn btn--primary" href="{{ family.get_absolute_url }}">Voir les listes</a>
+</div>
+{% endif %}
+{% endblock %}

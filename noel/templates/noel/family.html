@@ -1,0 +1,67 @@
+{% extends 'noel/base.html' %}{% load noel_tags %}
+{% block title %}{{ family.name }} · Cadeaux de Noël{% endblock %}
+{% block content %}
+<section class="hello">
+  <h1 class="hello__title">Bonjour {{ viewer.name }}</h1>
+  <p class="hello__sub">
+    {% if days == 0 %}C'est Noël aujourd'hui 🎄
+    {% elif days == 1 %}Noël, c'est demain.
+    {% elif days <= 60 %}Plus que {{ days }} jours avant Noël.
+    {% else %}Noël {{ season }} est dans {{ days }} jours : le temps de remplir sa liste.{% endif %}
+  </p>
+</section>
+
+<section class="mine">
+  <a class="mine__card" href="{{ viewer.get_absolute_url }}">
+    {% avatar viewer 'lg' %}
+    <span class="mine__text">
+      <strong>Ma liste {{ season }}</strong>
+      {% if my_ideas_count %}<span>{{ my_ideas_count|plural:"idée" }}. Ajoutez-en ou corrigez-la.</span>
+      {% else %}<span>Elle est vide. Dites aux autres ce qui vous ferait plaisir.</span>{% endif %}
+    </span>
+    <span class="mine__cta">{% if my_ideas_count %}Ouvrir{% else %}Commencer{% endif %}</span>
+  </a>
+
+  {% if res_total %}
+  <a class="mine__card mine__card--soft" href="{% url 'reservations' family.slug %}">
+    <span class="mine__icon">{% icon 'bag' %}</span>
+    <span class="mine__text">
+      <strong>À acheter</strong>
+      <span>{% if res_todo %}{{ res_todo }} sur {{ res_total }} pas encore acheté{{ res_todo|pluralize }}{% else %}Tout est acheté, bravo !{% endif %}</span>
+    </span>
+  </a>
+  {% endif %}
+
+  {% for a in assignments %}
+  <a class="santa" href="{{ a.receiver.get_absolute_url }}">
+    <span class="santa__label">{{ a.draw.title }}{% if a.giver.pk != viewer.pk %} · pour {{ a.giver.name }}{% endif %}</span>
+    <span class="santa__name">{% if a.giver.pk == viewer.pk %}Vous offrez à {{ a.receiver.name }}{% else %}{{ a.giver.name }} offre à {{ a.receiver.name }}{% endif %}</span>
+    {% if a.draw.budget %}<span class="santa__budget">Budget conseillé : {{ a.draw.budget }}</span>{% endif %}
+    <span class="santa__hint">Voir sa liste</span>
+  </a>
+  {% endfor %}
+</section>
+
+{% if managed %}
+<section class="block">
+  <h2 class="block__title">Les listes que vous tenez</h2>
+  <div class="people">
+    {% for m in managed %}{% include 'noel/partials/person.html' with m=m %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="block">
+  <h2 class="block__title">Pour qui cherchez-vous ?</h2>
+  {% if others %}
+  <div class="people">
+    {% for m in others %}{% include 'noel/partials/person.html' with m=m %}{% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <p>Vous êtes seul ici pour l'instant.</p>
+    {% if viewer.is_admin %}<a class="btn" href="{% url 'manage' family.slug %}">Inviter la famille</a>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

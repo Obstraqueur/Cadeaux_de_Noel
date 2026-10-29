@@ -1,0 +1,14 @@
+{% extends 'registration/auth_base.html' %}
+{% block title %}Connexion · Cadeaux de Noël{% endblock %}
+{% block heading %}Cadeaux de Noël{% endblock %}
+{% block sub %}La liste au Père Noël de toute la famille.{% endblock %}
+{% block form %}
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% include 'noel/partials/fields.html' %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <button class="btn btn--primary btn--block" type="submit">Se connecter</button>
+</form>
+<p class="authcard__foot">Pas encore de compte ? Demandez le lien d'invitation à l'organisateur de votre famille.<br>
+Mot de passe oublié ? L'organisateur peut vous envoyer un lien pour le changer.</p>
+{% endblock %}
