@@ -1,8 +1,11 @@
 """Qui voit quoi. Toutes les règles qui protègent la surprise sont ici.
 
-- La personne concernée voit uniquement les idées qu'elle a écrites (ou que ses
-  « gestionnaires », par exemple ses parents, ont écrites pour elle).
-  Elle ne voit jamais les réservations ni les suggestions surprises.
+- La personne concernée ne voit PAS sa propre liste : le but est qu'elle oublie ce
+  qu'elle a demandé pour être surprise. Elle peut seulement retrouver une de ses
+  idées par la recherche (`search_own`) pour la corriger ou la supprimer.
+  La recherche ne porte que sur les idées qu'elle a écrites (ou que ses
+  « gestionnaires », par exemple ses parents, ont écrites pour elle) : jamais
+  les suggestions surprises, jamais les réservations.
 - Tous les autres membres de la famille voient toutes les idées et qui s'en occupe.
 """
 
@@ -30,9 +33,12 @@ def _not_surprise_q(recipient):
     return Q(author_id=recipient.pk) | Q(author__user_id__in=manager_ids)
 
 
-def _base(recipient):
+def _base(recipient, include_archived=False):
+    qs = Idea.objects.filter(recipient=recipient)
+    if not include_archived:
+        qs = qs.filter(archived=False)
     return (
-        Idea.objects.filter(recipient=recipient, archived=False)
+        qs
         .select_related("author", "reservation", "reservation__owner")
         .prefetch_related("reservation__participants")
     )
@@ -49,10 +55,34 @@ def ideas_for_owner(recipient):
 
 def ideas_for_others(recipient):
     season = current_season()
-    qs = _base(recipient)
+    qs = _base(recipient, include_archived=True)
+    # Une idée retirée par la personne mais déjà réservée reste visible pour les autres
+    # (le cadeau est peut-être déjà acheté).
+    qs = qs.filter(Q(archived=False) | Q(reservation__isnull=False))
     current = qs.filter(year__gte=season)
     older = qs.filter(year__lt=season, reservation__isnull=True)
     return current, older
+
+
+def own_ideas(recipient):
+    """Les idées de la personne qu'elle a le droit de retrouver par la recherche."""
+    season = current_season()
+    return _base(recipient).filter(_not_surprise_q(recipient)).filter(
+        Q(year__gte=season) | Q(reservation__isnull=True)
+    )
+
+
+def own_count(recipient):
+    return _base(recipient).filter(_not_surprise_q(recipient), year__gte=current_season()).count()
+
+
+def search_own(recipient, query):
+    query = (query or "").strip()
+    if len(query) < 2:
+        return Idea.objects.none()
+    return own_ideas(recipient).filter(Q(title__icontains=query) | Q(details__icontains=query)).order_by(
+        "-year", "-created_at"
+    )[:20]
 
 
 def can_see_reservations(recipient, user):

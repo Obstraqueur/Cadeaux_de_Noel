@@ -1,0 +1,5 @@
+{% load noel_tags %}<div class="vault" id="my-count" hx-get="{% url 'my_count' family.slug %}" hx-trigger="count-changed from:body" hx-swap="outerHTML">
+  <span class="vault__icon">{% icon 'gift' %}</span>
+  <p>{% if count %}<strong>{{ count|plural:"idée" }}</strong> dans votre liste {{ season }}, bien rangée{{ count|pluralize }} à l'abri de vos yeux.
+  {% else %}Votre liste {{ season }} est vide. Une idée, même vague, aide beaucoup : « un livre de cuisine », « des gants chauds »…{% endif %}</p>
+</div>

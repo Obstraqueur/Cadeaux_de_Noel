@@ -6,10 +6,10 @@ Ce projet remplace les anciens sites `Cadeaux`, `Cadeaux_mulhouse` et `Anniv_sim
 
 ## Ce que fait le site
 
-- **Ma liste** : ajouter, modifier ou supprimer ses idées, avec des précisions, un lien, un prix indicatif et un cœur « j'en rêve ».
-- **Les listes des autres** : réserver (« Je m'en occupe »), marquer comme acheté, **participer à plusieurs** à un gros cadeau, ou **suggérer une idée surprise** que la personne ne verra pas.
+- **Ma liste, cachée même pour soi** : on ajoute ses idées (précisions, lien, prix indicatif, cœur « j'en rêve ») puis on les oublie pour être surpris. Le site indique seulement combien on en a mis, et une **recherche** retrouve une idée pour la modifier ou la supprimer. Elle ne montre jamais les suggestions des autres ni les réservations.
+- **Les listes des autres** : réserver (« Je m'en occupe »), marquer comme acheté, **participer à plusieurs** à un gros cadeau, ou **suggérer une idée**, marquée « Suggestion d'un tiers » et invisible pour la personne.
 - **À acheter** : tout ce dont je m'occupe, avec une case à cocher une fois l'achat fait.
-- **Années automatiques** : les idées non offertes des années passées reviennent sous « Toujours d'actualité ? ».
+- **Années automatiques** : les idées non offertes des années passées restent proposées aux autres, et chacun peut retrouver les siennes et les « garder pour cette année ».
 - **Amis secrets** : tirage au sort qui respecte les foyers, évite la personne de l'an dernier et les échanges réciproques. Chacun ne voit que sa propre personne.
 - **Plusieurs familles** sur un seul site, chacune avec son lien d'invitation.
 - **Profils sans compte** (enfants, grands-parents) dont un parent tient la liste.
@@ -31,7 +31,7 @@ noel/
   management/commands/
     import_ancien_site.py   reprise des anciennes bases
     demo.py                 famille fictive pour essayer
-  tests.py       25 tests
+  tests.py       28 tests
 deploy/          service systemd et configuration nginx
 ```
 
@@ -72,7 +72,7 @@ Options utiles :
 | `--sans-tirages` | Ne pas reprendre les tirages (les anciens « essaie 1/2/3 », par exemple). |
 | `--auteur-proprietaire` | Voir ci-dessous. |
 
-**À propos des anciennes idées.** L'ancien site n'enregistrait pas qui avait écrit une idée. Par prudence, les idées reprises restent **invisibles pour la personne concernée**, comme avant. Les autres les voient toujours. Avec `--auteur-proprietaire`, chacun revoit ses anciennes idées et peut les garder pour cette année, mais il verra aussi les suggestions qu'on avait ajoutées pour lui.
+**À propos des anciennes idées.** L'ancien site n'enregistrait pas qui avait écrit une idée. Par prudence, les idées reprises restent **invisibles pour la personne concernée**, comme avant. Les autres les voient toujours. Avec `--auteur-proprietaire`, chacun peut retrouver ses anciennes idées par la recherche et les garder pour cette année, mais il verra aussi les suggestions qu'on avait ajoutées pour lui.
 
 Un prénom présent dans les deux bases (Edmond, par exemple) devient **un seul compte membre des deux familles**.
 

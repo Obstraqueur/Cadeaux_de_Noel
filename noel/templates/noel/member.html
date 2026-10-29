@@ -9,7 +9,7 @@
     <h1 class="listhead__title">{% if owner_view %}Ma liste {{ season }}{% else %}{{ recipient.name }}{% endif %}</h1>
     <p class="listhead__sub">
       {% if owner_view %}
-        Les autres voient cette liste. Vous ne verrez jamais ce qu'ils réservent ni les surprises qu'ils ajoutent.
+        Vos idées restent cachées, même pour vous : oubliez-les et laissez-vous surprendre. Les autres les voient, vous jamais ce qu'ils réservent.
       {% elif can_add_own %}
         Vous tenez la liste de {{ recipient.name }}. Vous voyez aussi ce que les autres ont réservé.
       {% else %}
@@ -23,28 +23,48 @@
 <p class="notice notice--santa">{% icon 'dice' %} {{ recipient.name }} est votre ami secret ({{ santa_for.draw.title }}{% if santa_for.draw.budget %}, budget {{ santa_for.draw.budget }}{% endif %}).</p>
 {% endif %}
 
+{% if owner_view %}
 <section class="adder">
-  <details class="adder__box" {% if owner_view and not items %}open{% endif %}>
+  {% include 'noel/partials/my_count.html' with count=own_count %}
+  <details class="adder__box" {% if not own_count %}open{% endif %}>
+    <summary class="btn btn--primary btn--block">{% icon 'plus' %} Ajouter une idée</summary>
+    {% include 'noel/partials/idea_form.html' %}
+  </details>
+</section>
+
+<section class="block finder">
+  <h2 class="block__title">Retrouver une de mes idées</h2>
+  <p class="finder__hint">Pour la corriger ou la supprimer. Tapez quelques lettres de ce que vous aviez écrit.</p>
+  <div class="finder__box">
+    {% icon 'search' %}
+    <input class="input" type="search" name="q" autocomplete="off" placeholder="Ex. gants, livre, casque…"
+           aria-label="Rechercher dans mes idées"
+           hx-get="{% url 'my_search' family.slug %}" hx-trigger="input changed delay:250ms, search"
+           hx-target="#search-results" hx-swap="innerHTML">
+  </div>
+  <div id="search-results" aria-live="polite"></div>
+</section>
+{% else %}
+<section class="adder">
+  <details class="adder__box">
     <summary class="btn btn--primary btn--block">{% icon 'plus' %}
-      {% if owner_view or can_add_own %}Ajouter une idée{% else %}Suggérer une idée pour {{ recipient.name }}{% endif %}
+      {% if can_add_own %}Ajouter une idée{% else %}Suggérer une idée pour {{ recipient.name }}{% endif %}
     </summary>
     {% include 'noel/partials/idea_form.html' %}
   </details>
-  {% if not owner_view and not can_add_own %}
-    <p class="adder__hint">{% icon 'eye-off' %} Vos suggestions restent invisibles pour {{ recipient.name }}.</p>
+  {% if not can_add_own %}
+    <p class="adder__hint">{% icon 'eye-off' %} Votre suggestion sera marquée « suggestion d'un tiers » et restera invisible pour {{ recipient.name }}.</p>
   {% endif %}
 </section>
 
 <section class="block">
-  {% if not owner_view %}<h2 class="block__title">Idées disponibles</h2>{% endif %}
+  <h2 class="block__title">Idées disponibles</h2>
   <ul class="tags" id="ideas">
     {% for c in items %}{% include 'noel/partials/idea.html' with idea=c.idea res=c.res mine=c.mine participating=c.participating can_edit=c.can_edit surprise=c.surprise %}{% endfor %}
   </ul>
-  <div class="empty empty--list">
-    {% if owner_view %}<p>Votre liste est vide. Une idée, même vague, aide beaucoup : « un livre de cuisine », « des gants chauds »…</p>
-    {% else %}<p>Aucune idée libre pour l'instant. Suggérez-en une ci-dessus.</p>{% endif %}
-  </div>
+  <div class="empty empty--list"><p>Aucune idée libre pour l'instant. Suggérez-en une ci-dessus.</p></div>
 </section>
+{% endif %}
 
 {% if taken %}
 <section class="block">
@@ -55,16 +75,15 @@
 </section>
 {% endif %}
 
-{% if older %}
+{% if older and not owner_view %}
 <section class="block">
-  <details class="older" {% if owner_view %}open{% endif %}>
+  <details class="older">
     <summary class="block__title">
-      {% if owner_view %}Toujours d'actualité ?{% else %}Idées des années précédentes{% endif %}
+      Idées des années précédentes
       <span class="count">{{ older|length }}</span>
     </summary>
     <p class="older__hint">
-      {% if owner_view %}Ces idées des années passées n'ont pas été offertes. Gardez celles qui vous font encore envie.
-      {% else %}Jamais offertes. Elles peuvent encore faire plaisir, mais vérifiez qu'elles sont toujours d'actualité.{% endif %}
+      Jamais offertes. Elles peuvent encore faire plaisir, mais vérifiez qu'elles sont toujours d'actualité.
     </p>
     <ul class="tags tags--older">
       {% for c in older %}

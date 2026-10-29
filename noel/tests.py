@@ -33,17 +33,48 @@ class Base(TestCase):
 
 
 class VisibilityTests(Base):
-    def test_owner_never_sees_surprises_nor_reservations(self):
+    def test_owner_list_is_hidden_but_searchable(self):
         own = Idea.objects.create(recipient=self.bob, author=self.bob, title="Un pull vert")
-        Idea.objects.create(recipient=self.bob, author=self.alice, title="SURPRISE-montre")
+        Idea.objects.create(recipient=self.bob, author=self.alice, title="Un pull SURPRISE")
         Reservation.objects.create(idea=own, owner=self.alice)
 
         self.login(self.bob)
         html = self.client.get(self.url("member", self.bob.pk)).content.decode()
-        self.assertIn("Un pull vert", html)
-        self.assertNotIn("SURPRISE-montre", html)
-        self.assertNotIn("Réservé", html)
-        self.assertNotIn("Alice", html.split('id="ideas"')[1])
+        self.assertNotIn("Un pull vert", html)          # sa liste est cachée
+        self.assertIn("1 idée", html)                    # mais il sait combien il en a
+        self.assertNotIn("SURPRISE", html)
+
+        found = self.client.get(self.url("my_search"), {"q": "pull"}).content.decode()
+        self.assertIn("Un pull vert", found)              # retrouvable par la recherche
+        self.assertNotIn("SURPRISE", found)               # jamais les suggestions des autres
+        self.assertNotIn("Réservé", found)                # ni les réservations
+        self.assertNotIn("Alice", found)
+        self.assertNotIn("Un pull vert", self.client.get(self.url("my_search"), {"q": "p"}).content.decode())
+
+    def test_owner_add_does_not_show_idea(self):
+        self.login(self.bob)
+        r = self.client.post(self.url("idea_add", self.bob.pk), {"title": "Un bonnet"}, HTTP_HX_REQUEST="true")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("Un bonnet", r.content.decode())
+        self.assertIn("count-changed", r["HX-Trigger"])
+
+    def test_owner_deleting_reserved_idea_keeps_it_for_reserver(self):
+        idea = Idea.objects.create(recipient=self.bob, author=self.bob, title="Casque")
+        Reservation.objects.create(idea=idea, owner=self.alice, status=Reservation.BOUGHT)
+        self.login(self.bob)
+        self.client.post(self.url("idea_delete", idea.pk), HTTP_HX_REQUEST="true")
+        idea.refresh_from_db()
+        self.assertTrue(idea.archived)
+        self.assertNotIn('class="tag', self.client.get(self.url("my_search"), {"q": "Casque"}).content.decode())
+        self.login(self.alice)
+        r = self.client.get(self.url("reservations"))
+        self.assertContains(r, "Casque")
+        self.assertContains(r, "Retirée de sa liste")
+
+    def test_third_party_label(self):
+        Idea.objects.create(recipient=self.bob, author=self.isa, title="Une écharpe")
+        self.login(self.alice)
+        self.assertContains(self.client.get(self.url("member", self.bob.pk)), "Suggestion d'un tiers (Isabelle)")
 
     def test_others_see_everything_with_status(self):
         own = Idea.objects.create(recipient=self.bob, author=self.bob, title="Un pull vert")
@@ -66,7 +97,7 @@ class VisibilityTests(Base):
         child.managers.add(self.isa.user)
         Idea.objects.create(recipient=child, author=self.isa, title="Lego avion")
         self.client.force_login(child_user)
-        self.assertContains(self.client.get(self.url("member", child.pk)), "Lego avion")
+        self.assertContains(self.client.get(self.url("my_search"), {"q": "lego"}), "Lego avion")
 
     def test_non_member_is_refused(self):
         stranger = User.objects.create_user("Intrus", password="x" * 8)
@@ -83,10 +114,14 @@ class VisibilityTests(Base):
         bought = Idea.objects.create(recipient=self.bob, author=self.bob, title="Déjà offert", year=current_season() - 1)
         Reservation.objects.create(idea=bought, status=Reservation.BOUGHT)
         self.login(self.bob)
-        r = self.client.get(self.url("member", self.bob.pk))
-        self.assertContains(r, "Toujours d'actualité")
+        r = self.client.get(self.url("my_search"), {"q": "souhait"})
         self.assertContains(r, "Vieux souhait")
-        self.assertNotContains(r, "Déjà offert")
+        self.assertContains(r, "Garder pour")
+        self.assertNotContains(self.client.get(self.url("my_search"), {"q": "offert"}), "Déjà offert")
+        old = Idea.objects.get(title="Vieux souhait")
+        self.client.post(self.url("idea_keep", old.pk), {"action": "keep"}, HTTP_HX_REQUEST="true")
+        old.refresh_from_db()
+        self.assertEqual(old.year, current_season())
 
 
 class ReservationTests(Base):

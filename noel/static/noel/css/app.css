@@ -324,6 +324,22 @@ img { max-width: 100%; }
 .chip--link:hover { text-decoration: underline; }
 .chip--surprise { background: color-mix(in srgb, var(--gold) 22%, var(--surface)); color: var(--text); }
 .chip .icon { width: 1em; height: 1em; }
+.chip--warn { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent); font-weight: 700; }
+.tag--tiers .tag__paper { background: color-mix(in srgb, var(--gold) 9%, var(--surface)); }
+.tag--tiers .tag__paper::before { background: var(--gold); }
+
+/* Ma liste : cachée, on ne retrouve une idée que par la recherche */
+.vault { display: flex; gap: 14px; align-items: center; padding: 16px 18px; margin-bottom: 12px;
+  background: var(--surface); border: 1.5px dashed var(--gold); border-radius: var(--r-panel); }
+.vault__icon { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px;
+  background: color-mix(in srgb, var(--gold) 22%, var(--surface)); color: var(--text); }
+.vault p { max-width: 60ch; }
+.finder__hint { color: var(--muted); margin: -6px 0 12px; }
+.finder__box { position: relative; }
+.finder__box > .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.finder__box .input { padding-left: 44px; }
+#search-results { margin-top: 14px; }
+.finder__none { color: var(--muted); padding: 6px 2px; }
 
 .older > summary, .panel > summary { cursor: pointer; list-style: none; }
 .panel > summary::-webkit-details-marker { display: none; }

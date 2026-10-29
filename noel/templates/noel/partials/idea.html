@@ -1,4 +1,4 @@
-{% load noel_tags %}<li class="tag{% if idea.favorite %} tag--fav{% endif %}{% if res %} tag--taken{% if res.is_bought %} tag--bought{% endif %}{% endif %}{% if mine or participating %} tag--mine{% endif %}" id="idea-{{ idea.pk }}"><div class="tag__paper">
+{% load noel_tags %}<li class="tag{% if idea.favorite %} tag--fav{% endif %}{% if res %} tag--taken{% if res.is_bought %} tag--bought{% endif %}{% endif %}{% if mine or participating %} tag--mine{% endif %}{% if surprise %} tag--tiers{% endif %}" id="idea-{{ idea.pk }}"><div class="tag__paper">
   <div class="tag__body">
     <p class="tag__title">
       {% if idea.favorite %}<span class="tag__fav" title="J'en rêve">{% icon 'heart' %}</span>{% endif %}
@@ -9,7 +9,8 @@
       {% if idea.url %}<a class="chip chip--link" href="{{ idea.url }}" target="_blank" rel="noopener noreferrer">{% icon 'link' %} {{ idea.url|domain }}</a>{% endif %}
       {% if idea.price %}<span class="chip">{{ idea.price }}</span>{% endif %}
       {% if idea.year < season %}<span class="chip">Idée de {{ idea.year }}</span>{% endif %}
-      {% if surprise %}<span class="chip chip--surprise" title="{{ idea.recipient.name }} ne voit pas cette idée">{% icon 'eye-off' %} Suggestion{% if idea.author %} de {{ idea.author.name }}{% endif %}</span>{% endif %}
+      {% if surprise %}<span class="chip chip--surprise" title="{{ idea.recipient.name }} ne voit pas cette idée">{% icon 'eye-off' %} Suggestion d'un tiers{% if idea.author %} ({{ idea.author.name }}){% endif %}</span>{% endif %}
+      {% if idea.archived %}<span class="chip chip--warn" title="La personne l'a retirée après votre réservation">Retirée de sa liste</span>{% endif %}
     </p>
   </div>
 
@@ -26,6 +27,9 @@
   {% endif %}
 
   <div class="tag__actions">
+    {% if owner_view and idea.year < season %}
+      <button class="btn btn--small" hx-post="{% url 'idea_keep' family.slug idea.pk %}" hx-vals='{"action": "keep"}' hx-target="closest li" hx-swap="outerHTML">{% icon 'check' %} Garder pour {{ season }}</button>
+    {% endif %}
     {% if not owner_view %}
       {% if not res %}
         <button class="btn btn--small btn--primary" hx-post="{% url 'reservation' family.slug idea.pk 'reserve' %}" hx-target="closest li" hx-swap="outerHTML">Je m'en occupe</button>

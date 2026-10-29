@@ -28,11 +28,11 @@
 |---|---|---|
 | **Inscription / connexion** par prénom | Chacun crée un compte, ce qui crée automatiquement sa « carte » | ✅ Indispensable. Un prénom suffit, c'est adapté à une famille. |
 | **Cartes (« blocs »)** une par personne | Page d'accueil = grille de cartes | ✅ Bonne idée, mais la carte est liée au compte **par le texte du prénom** (`bloc.titre == user.username`) : renommer quelqu'un casse tout. |
-| **Ma liste** | Sur sa propre carte, on ajoute des idées | ✅ Cœur du site. ⚠️ On ne **voit pas** ses propres idées, sauf en passant par la recherche. On ne peut donc pas relire ni corriger sa liste facilement. |
+| **Ma liste** | Sur sa propre carte, on ajoute des idées | ✅ Cœur du site. On ne **voit pas** ses propres idées, **et c'est voulu** : on les oublie pour être surpris. La recherche permet d'en retrouver une pour la corriger. ⚠️ Rien n'indique combien d'idées on a déjà mises. |
 | **Idées ajoutées par les autres** | On peut ajouter une idée sur la carte de quelqu'un d'autre | ✅ Excellente idée (« il a dit qu'il n'avait plus de parfum »). Mais rien ne distingue une idée de la personne d'une suggestion d'un proche, et l'auteur n'est pas enregistré. |
 | **« Fait »** | Marque une idée comme offerte, elle passe dans « Cadeaux faits » | ✅ Indispensable contre les doublons. ⚠️ On ne sait pas **qui** l'a prise. Pas d'état « je compte le prendre » distinct de « c'est acheté ». Le bouton pour annuler s'appelle « Supprimer », ce qui prête à confusion. |
 | **Séparation par année** | Listes « 2023 » et « 2024 » distinctes | ⚠️ Années **écrites en dur** dans le code (`année = 2024`). En 2025, il a fallu modifier le code. Aucune gestion des idées d'il y a 3 ans. |
-| **Recherche + autocomplétion** | Chercher dans ses idées | ❌ Peu utile pour une dizaine d'idées. Surtout, **l'autocomplétion cherche dans toute la base**, y compris les idées que les autres ont ajoutées pour toi : **elle dévoile les surprises**. |
+| **Recherche + autocomplétion** | Chercher dans ses idées | ✅ Indispensable puisque sa liste est cachée. ❌ Mais **l'autocomplétion cherche dans toute la base**, y compris les idées que les autres ont ajoutées pour toi : **elle dévoile les surprises**. |
 | **Suppression avec confirmation** | Fenêtre « Êtes-vous sûr ? » | ✅ Bien. N'importe qui peut cependant supprimer n'importe quelle idée, même celles des autres. |
 | **Amis secrets** | Tirage au sort excluant son propre foyer et évitant de retomber sur une personne déjà tirée par son foyer lors d'un tirage précédent | ✅ Très bonne fonctionnalité, avec des règles pertinentes. ⚠️ L'algorithme prend toujours « le premier candidat », fait 10 essais puis échoue **sans message**, et stocke les personnes par **prénom** (texte). Les tirages « essaie 1/2/3 » montrent qu'on a dû le relancer plusieurs fois. |
 | **Mot de passe oublié** | Formulaire « nom + nouveau mot de passe » | ❌ **Faille majeure** : n'importe qui peut changer le mot de passe de n'importe qui sans aucune vérification. |
@@ -61,11 +61,13 @@ Par ordre d'importance :
 Classé par **valeur réelle pour la famille**.
 
 ### Indispensable (fait dans la nouvelle version)
-- **Voir et modifier sa propre liste** (titre, précisions, lien, prix indicatif, priorité « j'en rêve »).
+- **Sa propre liste reste cachée**, comme avant, pour qu'on l'oublie. On voit seulement combien d'idées on a mises, et une **recherche** retrouve une idée pour la modifier ou la supprimer. Cette recherche ne porte que sur ses propres idées : jamais les suggestions des autres, jamais les réservations.
+- Des idées plus riches : précisions, lien, prix indicatif, cœur « j'en rêve ».
+- Si on supprime une idée que quelqu'un a déjà réservée, elle reste dans sa page « À acheter » avec la mention « Retirée de sa liste ».
 - **Réservation nominative** : « Je m'en occupe » → « C'est acheté ». Les autres voient qui s'en charge, **jamais la personne concernée**.
 - **Cadeau à plusieurs** : rejoindre la réservation de quelqu'un pour participer à un gros cadeau.
-- **Suggestions surprises** clairement identifiées, invisibles pour la personne concernée.
-- **Années automatiques.** Les idées non offertes des années passées sont proposées sous « Toujours d'actualité ? » : un clic pour les garder, un clic pour les retirer.
+- **Suggestions d'un tiers** : une idée ajoutée sur la liste de quelqu'un d'autre porte l'étiquette « Suggestion d'un tiers (prénom) » et reste invisible pour la personne concernée.
+- **Années automatiques.** Les idées non offertes des années passées restent visibles pour les autres dans « Idées des années précédentes ». La personne peut retrouver les siennes par la recherche et les « garder pour cette année » en un clic.
 - **Plusieurs familles sur un seul site**, avec un lien d'invitation par famille (Mulhouse rejoint le même site).
 - **Foyers** gérés proprement et réutilisés par le tirage.
 - **Profils gérés** : les enfants ou grands-parents sans compte (Fabian ne s'est jamais connecté) ont une liste tenue par un parent.
@@ -85,7 +87,7 @@ Classé par **valeur réelle pour la famille**.
 - Liste « cadeaux reçus / merci » après Noël.
 
 ### Détails moins importants (abandonnés)
-- Recherche et autocomplétion : inutiles avec 10 à 20 idées par personne. Un filtre suffit.
+- Autocomplétion sur toute la base (remplacée par une recherche limitée à ses propres idées).
 - Champ « détails » de la carte (toujours vide).
 - Père Noël volant toutes les 3 minutes, remplacé par une neige discrète que chacun peut couper.
 

@@ -1,0 +1,9 @@
+{% if q|length >= 2 %}
+  {% if results %}
+  <ul class="tags">
+    {% for c in results %}{% include 'noel/partials/idea.html' with idea=c.idea res=None mine=False participating=False can_edit=c.can_edit surprise=False owner_view=True %}{% endfor %}
+  </ul>
+  {% else %}
+  <p class="finder__none">Aucune de vos idées ne contient « {{ q }} ».</p>
+  {% endif %}
+{% endif %}

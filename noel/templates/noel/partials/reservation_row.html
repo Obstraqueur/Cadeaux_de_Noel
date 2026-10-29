@@ -8,6 +8,7 @@
       Pour <a href="{{ idea.recipient.get_absolute_url }}">{{ idea.recipient.name }}</a>
       {% if idea.price %}<span class="chip">{{ idea.price }}</span>{% endif %}
       {% if idea.url %}<a class="chip chip--link" href="{{ idea.url }}" target="_blank" rel="noopener noreferrer">{% icon 'link' %} {{ idea.url|domain }}</a>{% endif %}
+      {% if idea.archived %}<span class="chip chip--warn">Retirée de sa liste</span>{% endif %}
       {% if not mine %}<span class="chip">avec {{ res.owner.name|default:"quelqu'un" }}</span>{% endif %}
     </p>
   </div>

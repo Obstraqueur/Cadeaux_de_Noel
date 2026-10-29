@@ -37,8 +37,10 @@ def is_htmx(request):
     return request.headers.get("HX-Request") == "true"
 
 
-def toast(response, text, kind="ok"):
-    response["HX-Trigger"] = json.dumps({"toast": {"text": text, "kind": kind}})
+def toast(response, text, kind="ok", **events):
+    payload = {"toast": {"text": text, "kind": kind}}
+    payload.update(events)
+    response["HX-Trigger"] = json.dumps(payload)
     return response
 
 
@@ -257,7 +259,8 @@ def member(request, slug, member_id):
         "can_add_own": can_add_own,
         "items": current_items if owner_view else available,
         "taken": [] if owner_view else taken,
-        "older": ctx_list(older),
+        "older": [] if owner_view else ctx_list(older),
+        "own_count": visibility.own_count(recipient) if owner_view else 0,
         "form": IdeaForm(),
         "season": current_season(),
         "santa_for": santa_for,
@@ -271,7 +274,10 @@ def idea_add(request, slug, member_id):
     recipient = get_object_or_404(Member, pk=member_id, family=family)
     form = IdeaForm(request.POST)
     if not form.is_valid():
-        resp = render(request, "noel/partials/idea_form.html", {"form": form, "family": family, "recipient": recipient})
+        resp = render(request, "noel/partials/idea_form.html", {
+            "form": form, "family": family, "recipient": recipient,
+            "owner_view": visibility.is_owner_view(recipient, request.user),
+        })
         resp["HX-Retarget"] = "#idea-form"
         resp["HX-Reswap"] = "outerHTML"
         return resp
@@ -280,6 +286,12 @@ def idea_add(request, slug, member_id):
     # Une idée écrite par un gestionnaire (parent) n'est pas une surprise : voir Idea.is_surprise.
     idea.author = viewer
     idea.save()
+    if is_htmx(request) and visibility.is_owner_view(recipient, request.user):
+        # Sa propre liste reste cachée : on confirme sans afficher l'idée.
+        resp = toast(HttpResponse(""), f"« {idea.title[:50]} » est dans votre liste. Vous pouvez l'oublier 🎁",
+                     **{"count-changed": True, "idea-added": True})
+        resp["HX-Reswap"] = "none"
+        return resp
     if is_htmx(request):
         msg = "Idée ajoutée" if recipient.pk == viewer.pk else (
             f"Suggestion ajoutée — {recipient.name} ne la verra pas" if idea.is_surprise else "Idée ajoutée"
@@ -318,9 +330,16 @@ def idea_delete(request, slug, idea_id):
     if not can_edit_idea(idea, viewer, request.user):
         raise PermissionDenied
     recipient = idea.recipient
-    idea.delete()
+    res = idea.reservation_or_none
+    if res is not None and not res.involves(viewer):
+        # Quelqu'un s'en occupe déjà (peut-être déjà acheté) : on la retire de la liste
+        # sans la faire disparaître pour lui. La personne ne l'apprend pas : même message.
+        idea.archived = True
+        idea.save(update_fields=["archived", "updated_at"])
+    else:
+        idea.delete()
     if is_htmx(request):
-        return toast(HttpResponse(""), "Idée supprimée")
+        return toast(HttpResponse(""), "Idée supprimée", **{"count-changed": True})
     return redirect(recipient)
 
 
@@ -336,7 +355,11 @@ def idea_keep(request, slug, idea_id):
     if action == "keep":
         idea.year = current_season()
         idea.save(update_fields=["year", "updated_at"])
-        msg = "Remise dans la liste de cette année"
+        msg = f"Remise dans la liste {idea.year}"
+        if is_htmx(request):
+            idea = Idea.objects.select_related("recipient", "author").get(pk=idea.pk)
+            resp = render_idea(request, idea, viewer)
+            return toast(resp, msg, **{"count-changed": True})
     else:
         idea.archived = True
         idea.save(update_fields=["archived", "updated_at"])
@@ -406,7 +429,7 @@ def reservation_action(request, slug, idea_id, action):
 def my_reservations(request, slug):
     family, viewer = family_and_viewer(request, slug)
     ideas = (
-        Idea.objects.filter(recipient__family=family, year__gte=current_season(), archived=False)
+        Idea.objects.filter(recipient__family=family, year__gte=current_season())
         .filter(Q(reservation__owner=viewer) | Q(reservation__participants=viewer))
         .select_related("recipient", "author", "reservation", "reservation__owner")
         .prefetch_related("reservation__participants")
@@ -554,4 +577,23 @@ def manage(request, slug):
         "family_form": FamilyForm(initial={"name": family.name}),
         "invite_url": request.build_absolute_uri(reverse("signup", args=[family.invite_code])),
         "reset_link": reset_link,
+    })
+
+
+@login_required
+def my_search(request, slug):
+    """Retrouver une de ses propres idées (la liste reste cachée le reste du temps)."""
+    family, viewer = family_and_viewer(request, slug)
+    q = request.GET.get("q", "")
+    results = [idea_context(i, viewer, request.user) for i in visibility.search_own(viewer, q)]
+    return render(request, "noel/partials/search_results.html", {
+        "family": family, "results": results, "q": q.strip(), "season": current_season(),
+    })
+
+
+@login_required
+def my_count(request, slug):
+    family, viewer = family_and_viewer(request, slug)
+    return render(request, "noel/partials/my_count.html", {
+        "family": family, "count": visibility.own_count(viewer), "season": current_season(),
     })
