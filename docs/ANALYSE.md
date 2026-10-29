@@ -91,7 +91,7 @@ Classé par **valeur réelle pour la famille**.
 - **Foyers** gérés proprement et réutilisés par le tirage.
 - **Profils gérés** : les enfants ou grands-parents sans compte (Fabian ne s'est jamais connecté) ont une liste tenue par un parent.
 - **Tirage d'amis secrets fiable** : algorithme qui trouve toujours une solution s'il en existe une, respecte les foyers, évite les tirages de l'année précédente, et affiche un message clair sinon. Chacun ne voit que **sa** personne.
-- **Mot de passe oublié sécurisé** : un administrateur de la famille génère un lien de réinitialisation à usage unique.
+- **Mot de passe oublié sécurisé** : seul un organisateur de la famille peut donner un mot de passe provisoire, que la personne change ensuite dans « Mon compte ».
 - **Mobile d'abord**, interactions sans rechargement de page.
 
 ### Utile (ajouté)
@@ -115,9 +115,13 @@ Classé par **valeur réelle pour la famille**.
 
 ## 5. Choix pour la nouvelle version
 
-- **Django 5.2 (version maintenue jusqu'en 2028)**, que tu connais déjà, avec une architecture propre : une seule application, de vraies relations entre les tables et des règles de visibilité centralisées et testées.
-- **HTMX** pour la fluidité : réserver, ajouter ou supprimer se fait sans rechargement, sans framework JavaScript lourd ni étape de compilation.
-- **CSS écrit à la main**, avec variables et thème clair/sombre automatique, sans dépendance.
-- **SQLite** reste parfaitement adapté (quelques dizaines d'utilisateurs).
-- **Configuration par variables d'environnement**, `DEBUG` désactivé en production, fichiers statiques servis par WhiteNoise, **Dockerfile** fourni.
-- **Commande de migration** `import_ancien_site` qui reprend les comptes (avec leurs mots de passe actuels), les foyers, les idées, les « faits » et les tirages.
+Le site doit être publié **uniquement via GitHub**, sans serveur à entretenir. GitHub Pages n'héberge que des pages fixes, il faut donc un service pour les données :
+
+- **GitHub Pages** pour le site : une seule page HTML, du JavaScript sans étape de compilation, et la même direction artistique (étiquettes cadeaux, vert sapin, rouge houx, neige).
+- **Supabase** (gratuit) pour les comptes, les données et les images du calendrier. La sécurité est dans la base elle-même :
+  - les **règles de lecture** (RLS) empêchent la personne concernée de lire les réservations et les suggestions qui la concernent ;
+  - **toutes les modifications** passent par des fonctions serveur qui vérifient les droits ;
+  - le **tirage des amis secrets** est fait sur le serveur, donc personne, pas même l'organisateur, ne voit les résultats des autres.
+- **Connexion par prénom** comme avant, sans e-mail. Les mots de passe de l'ancien site ne peuvent pas être repris : chacun en choisit un nouveau en récupérant son profil via le lien d'invitation.
+- **Reprise des données** par un script qui produit un fichier SQL à coller dans Supabase. Ce fichier n'est jamais publié, puisque le dépôt est public.
+- La version Django, complète elle aussi, reste disponible dans la branche `version-django` au cas où vous voudriez un jour héberger le site sur un serveur.

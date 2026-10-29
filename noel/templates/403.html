@@ -1,8 +1,0 @@
-{% extends 'noel/base.html' %}
-{% block content %}
-<div class="empty" style="margin-top:40px">
-  <p><strong>Cette page ne vous est pas accessible.</strong></p>
-  <p>{{ exception|default:"Vous n'avez pas les droits nécessaires." }}</p>
-  <a class="btn btn--primary" href="{% url 'home' %}">Retour à l'accueil</a>
-</div>
-{% endblock %}

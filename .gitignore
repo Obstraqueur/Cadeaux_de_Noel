@@ -1,13 +1,5 @@
-__pycache__/
-*.pyc
-.venv/
-venv/
-.env
-data/
+# Fichiers d'import : contiennent les données de la famille, ne jamais publier
+import_*.sql
 *.sqlite3
-*.sqlite3-*
-staticfiles/
-nohup.out
-*.log
+node_modules/
 .DS_Store
-media/

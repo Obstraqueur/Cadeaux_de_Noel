@@ -1,136 +1,98 @@
 # 🎁 Cadeaux de Noël
 
-La liste au Père Noël de toute la famille. Chacun écrit ce qui lui ferait plaisir, les autres réservent ce qu'ils offrent, et **la personne concernée ne voit jamais ce qu'on lui prépare**.
+La liste au Père Noël de toute la famille. Chacun écrit ce qui lui ferait plaisir, puis l'oublie. Les autres réservent ce qu'ils offrent, et **la personne concernée ne voit jamais ce qu'on lui prépare**.
 
-Ce projet remplace les anciens sites `Cadeaux`, `Cadeaux_mulhouse` et `Anniv_sim`. L'analyse de l'ancien site et les raisons des choix faits ici sont dans **[docs/ANALYSE.md](docs/ANALYSE.md)**.
+- **Le site** : des pages fixes hébergées gratuitement par **GitHub Pages**.
+- **Les données** : comptes, idées, réservations, tirages et calendrier, dans **Supabase** (gratuit), protégées par des règles de sécurité dans la base.
+
+L'analyse de l'ancien site et les raisons des choix sont dans **[docs/ANALYSE.md](docs/ANALYSE.md)**. La version Django précédente est conservée dans la branche [`version-django`](../../tree/version-django).
 
 ## Ce que fait le site
 
-- **Ma liste, cachée même pour soi** : on ajoute ses idées (précisions, lien, prix indicatif, cœur « j'en rêve ») puis on les oublie pour être surpris. Le site indique seulement combien on en a mis, et une **recherche** retrouve une idée pour la modifier ou la supprimer. Elle ne montre jamais les suggestions des autres ni les réservations.
-- **Les listes des autres** : réserver (« Je m'en occupe »), marquer comme acheté, **participer à plusieurs** à un gros cadeau, ou **suggérer une idée**, marquée « Suggestion d'un tiers » et invisible pour la personne.
-- **À acheter** : tout ce dont je m'occupe, avec une case à cocher une fois l'achat fait.
-- **Années automatiques** : les idées non offertes des années passées restent proposées aux autres, et chacun peut retrouver les siennes et les « garder pour cette année ».
-- **Amis secrets en 1, 2 ou 3 boucles** : chacun offre à 1, 2 ou 3 personnes différentes. Le tirage respecte les foyers et ne donne jamais deux fois la même personne. Si possible, il évite aussi les échanges réciproques, que deux personnes d'un même foyer offrent à la même personne, et les tirages de l'an dernier. Chacun ne voit que ses propres amis secrets.
-- **« Toujours d'actualité ? »** : chaque année, on revoit ses idées non offertes : « Oui » les range de nouveau (cachées), « Modifier » permet de les corriger, « Non » les supprime.
-- **Calendrier de l'Avent** : une case par jour, qui ne s'ouvre que le jour venu. L'organisateur envoie toutes les images d'un coup depuis le site.
-- **Aperçu des liens** : l'image du produit apparaît automatiquement quand on colle un lien.
-- **Plusieurs familles** sur un seul site, chacune avec son lien d'invitation.
-- **Profils sans compte** (enfants, grands-parents) dont un parent tient la liste.
-- **Gestion** pour les organisateurs : invitations, foyers, membres, lien « mot de passe oublié ».
-- Pensé pour le téléphone, avec un thème clair aux couleurs de Noël et une neige qu'on peut couper.
+- **Ma liste, cachée même pour soi** : on ajoute ses idées (précisions, lien, prix, cœur « j'en rêve ») puis on les oublie. Le site affiche seulement combien on en a mis, et une **recherche** retrouve une idée pour la corriger ou la supprimer.
+- **« Toujours d'actualité ? »** : les idées non offertes des années passées s'affichent avec trois choix. « Oui » les range de nouveau (cachées), « Modifier » permet de les corriger, « Non » les supprime.
+- **Les listes des autres** :
+  - réserver une idée (« Je m'en occupe »), puis la marquer comme achetée ;
+  - **participer à plusieurs** à un même cadeau ;
+  - **suggérer une idée**, marquée « Suggestion d'un tiers (prénom) » et invisible pour la personne concernée.
+- **À acheter** : tout ce dont je m'occupe, avec une case à cocher.
+- **Amis secrets en 1, 2 ou 3 boucles**, tirés sur le serveur (personne ne voit le résultat des autres) :
+  - **toujours** : pas soi-même, pas son foyer, pas deux fois la même personne ;
+  - **si possible** : pas la personne de l'an dernier, pas le même ami pour deux personnes d'un foyer, pas d'échange réciproque.
+- **Calendrier de l'Avent** : une case par jour, qui ne s'ouvre que le jour venu. L'organisateur envoie toutes les images d'un coup.
+- **Aperçu des liens** : l'image du produit s'affiche automatiquement.
+- **Gestion** : lien d'invitation, foyers, profils sans compte (enfants), mot de passe provisoire en cas d'oubli.
 
-## Technique
+## Mise en ligne (une seule fois)
 
-Django 5.2, HTMX (actions sans rechargement de page), CSS écrit à la main, SQLite et WhiteNoise. Aucune étape de compilation, aucune dépendance JavaScript externe, polices hébergées sur le site.
+### 1. Supabase : créer la base
 
-```
-config/          réglages Django (lus depuis les variables d'environnement)
-noel/
-  models.py      Famille, Foyer, Membre, Idée, Réservation, Tirage, Attribution
-  visibility.py  qui voit quoi : toutes les règles qui protègent la surprise
-  secret_santa.py  algorithme du tirage au sort
-  views.py, urls.py, forms.py
-  templates/, static/
-  management/commands/
-    import_ancien_site.py   reprise des anciennes bases
-    charger_avent.py        images du calendrier de l'Avent depuis un dossier
-    demo.py                 famille fictive pour essayer
-  preview.py     aperçu automatique des liens
-  tests.py       37 tests
-deploy/          service systemd et configuration nginx
-```
+1. Dans Supabase, ouvrez **SQL Editor → New query**.
+2. Collez **tout** le fichier [`supabase/migrations/20261029120000_cadeaux_de_noel.sql`](supabase/migrations/20261029120000_cadeaux_de_noel.sql) et cliquez sur **Run**.
+3. Dans **Authentication → Sign In / Providers → Email**, désactivez **« Confirm email »**.
 
-## Essayer en local
+Le script crée les tables, les règles de sécurité, les fonctions et l'espace de stockage privé « avent » pour les images du calendrier.
+
+### 2. Supabase : reprendre les données de l'ancien site
+
+Sur votre ordinateur (Python 3 suffit, rien à installer) :
 
 ```bash
-python -m venv .venv && source .venv/bin/activate      # Windows : .venv\Scripts\activate
-pip install -r requirements.txt
-export DJANGO_DEBUG=1                                  # Windows : set DJANGO_DEBUG=1
-python manage.py migrate
-python manage.py demo          # comptes Marie / Paul / Léa / Tom, mot de passe « noel2026 »
-python manage.py runserver
+python outils/import_ancien_site.py  Noel/Noel/Cadeaux/db.sqlite3  Noel/base_sauvgarde/db_cadeaux_copie_2023_2024.sqlite3 \
+       --famille "Famille Jean" --admin Edmond  > import_famille_jean.sql
 ```
 
-Ouvrez http://127.0.0.1:8000. Les tests se lancent avec `python manage.py test noel`.
+Collez le contenu de `import_famille_jean.sql` dans **SQL Editor** et cliquez sur **Run**. En fin de fichier se trouve le **code d'invitation** de la famille.
 
-## Reprendre les données de l'ancien site
-
-La commande lit une base de l'ancien site, sans la modifier, et la range dans une famille. **Les comptes gardent leur mot de passe actuel.** Elle peut être relancée sans créer de doublons.
-
-```bash
-# Famille Jean : la base 2025, puis la sauvegarde 2023-2024 (pour récupérer aussi les tirages 2024)
-python manage.py import_ancien_site Noel/Noel/Cadeaux/db.sqlite3 --famille "Famille Jean" --admin Edmond
-python manage.py import_ancien_site Noel/base_sauvgarde/db_cadeaux_copie_2023_2024.sqlite3 --famille "Famille Jean" --annee-tirages 2024
-
-# Calendrier de l'Avent (ou depuis le site : Calendrier → Préparer le calendrier)
-python manage.py charger_avent Noel/Noel/Cadeaux/media/avent_images --famille "Famille Jean" --debut 2026-11-30
-
-# Plus tard, si besoin : Mulhouse
-python manage.py import_ancien_site Noel/Cadeaux_mulhouse/db_mulhouse.sqlite3 --famille "Mulhouse" --admin Edmond
-```
-
-Options utiles :
+⚠️ Ce fichier contient les prénoms et les idées de la famille. **Ne le publiez pas** : il est exclu de git.
 
 | Option | Effet |
 |---|---|
-| `--admin Edmond Isabelle` | Prénoms des organisateurs (gestion, tirages). |
-| `--annee-defaut 2023` | Année des idées si l'ancienne base n'en enregistre pas (le cas de Mulhouse). |
-| `--annee-tirages 2024` | Année des anciens tirages quand la base ne l'enregistre pas (bases d'avant 2025). |
-| `--sans-tirages` | Ne pas reprendre les tirages (les anciens « essaie 1/2/3 », par exemple). |
-| `--auteur-proprietaire` | Voir ci-dessous. |
+| `--admin Edmond Isabelle` | Les organisateurs : ils gèrent la famille, les tirages et le calendrier. |
+| `--auteur-proprietaire` | Chacun pourra retrouver ses anciennes idées par la recherche, mais aussi celles que d'autres avaient ajoutées pour lui. Par défaut, les anciennes idées restent invisibles pour la personne concernée, comme dans l'ancien site. |
+| `--annee-defaut`, `--annee-tirages` | L'année des idées et des tirages, quand une base ancienne ne l'enregistre pas. |
 
-**À propos des anciennes idées.** L'ancien site n'enregistrait pas qui avait écrit une idée. Par prudence, les idées reprises restent **invisibles pour la personne concernée**, comme avant. Les autres les voient toujours. Avec `--auteur-proprietaire`, chacun peut retrouver ses anciennes idées par la recherche et les garder pour cette année, mais il verra aussi les suggestions qu'on avait ajoutées pour lui.
+### 3. GitHub Pages : mettre le site en ligne
 
-Un prénom présent dans les deux bases (Edmond, par exemple) devient **un seul compte membre des deux familles**.
+Dans le dépôt GitHub : **Settings → Pages → Build and deployment → Source : « Deploy from a branch »**, puis **Branch : `main` / `(root)`** et **Save**. Au bout d'une à deux minutes, le site est en ligne à l'adresse **https://obstraqueur.github.io/Cadeaux_de_Noel/**.
 
-## Mettre en ligne
+### 4. Inviter la famille
 
-### Option A : sur le serveur actuel, sans Docker
+Chacun ouvre le lien `https://obstraqueur.github.io/Cadeaux_de_Noel/#/invitation/<code>`, **choisit son prénom dans la liste** (ses idées et ses tirages sont déjà là) et choisit un mot de passe. **Commencez par Edmond** : ce compte devient organisateur. Ensuite, le lien est toujours disponible dans **Gérer la famille**.
 
-```bash
-git clone https://github.com/Obstraqueur/Cadeaux_de_Noel.git && cd Cadeaux_de_Noel
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env && nano .env           # clé secrète, adresse du site, GUNICORN_BIND=127.0.0.1:8000
-set -a && . ./.env && set +a
-mkdir -p data
-.venv/bin/python manage.py migrate
-.venv/bin/python manage.py collectstatic --noinput
-.venv/bin/python manage.py import_ancien_site ../Cadeaux/db.sqlite3 --famille "Famille Jean" --admin Edmond
-sudo cp deploy/cadeaux.service /etc/systemd/system/ && sudo systemctl enable --now cadeaux
-sudo cp deploy/nginx.conf /etc/nginx/sites-available/cadeaux   # adapter le nom de domaine
-sudo ln -s /etc/nginx/sites-available/cadeaux /etc/nginx/sites-enabled/ && sudo systemctl reload nginx
-sudo certbot --nginx -d cadeaux.exemple.fr                     # HTTPS gratuit
+Les mots de passe de l'ancien site ne peuvent pas être repris, car Supabase utilise un autre format.
+
+### 5. Calendrier de l'Avent
+
+Menu **Calendrier de l'Avent → Préparer le calendrier → Tout envoyer d'un coup**. Sélectionnez toutes les images (`day0.png`, `day0_modal.png`, `day1.png`…) et choisissez la date de la case 0 (le 30 novembre par défaut).
+
+## Comment c'est construit
+
+```
+index.html                 la page unique du site
+assets/
+  app.css                  la direction artistique (étiquettes cadeaux, vert sapin, rouge houx)
+  js/app.js                les écrans : listes, réservations, tirages, calendrier, gestion
+  js/ui.js                 petits outils d'affichage
+  js/config.js             adresse et clé PUBLIQUE de Supabase
+  vendor/                  supabase-js (copié ici, sans dépendance externe)
+  fonts/                   polices hébergées sur le site
+supabase/
+  migrations/…sql          tables, règles de sécurité, fonctions serveur
+  tests/                   20 tests de sécurité de la base (Postgres local)
+outils/import_ancien_site.py   reprise des anciennes bases
+docs/ANALYSE.md            analyse critique de l'ancien site
 ```
 
-Pour arrêter l'ancien site : `pkill -f "gunicorn.*Cadeaux"` (il tournait avec `nohup`).
-Pour mettre à jour : `git pull && .venv/bin/python manage.py migrate && .venv/bin/python manage.py collectstatic --noinput && sudo systemctl restart cadeaux`.
+**Sécurité.** La clé de `config.js` est publique par nature. Le navigateur ne peut que **lire** ce que les règles de la base autorisent, et toutes les modifications passent par des fonctions serveur qui vérifient les droits :
+- la personne concernée ne peut pas lire les réservations sur ses idées, ni les suggestions des autres ;
+- chacun ne lit que ses propres amis secrets ;
+- les images du calendrier ne sont lisibles qu'à partir de leur jour.
 
-> Sans nom de domaine ni HTTPS (accès par `http://IP:8000`), mettez `DJANGO_SECURE_COOKIES=0` dans `.env`, sinon la connexion échoue. Le HTTPS reste fortement conseillé : il protège les mots de passe.
-
-### Option B : avec Docker
-
-```bash
-cp .env.example .env && nano .env
-docker compose up -d --build
-docker compose exec web python manage.py import_ancien_site /app/data/ancien.sqlite3 --famille "Famille Jean" --admin Edmond
-```
-
-(Copiez d'abord l'ancienne base dans le dossier `data/`.)
-
-### Sauvegarde
-
-Toutes les données sont dans le dossier `data/` : la base `cadeaux.sqlite3` et les images du calendrier dans `media/`. Copiez ce dossier de temps en temps.
-
-## Premier lancement sans ancienne base
-
-1. `python manage.py createsuperuser` (ou inscrivez-vous puis créez une famille depuis la page d'accueil).
-2. Connectez-vous et créez votre famille : vous en êtes l'organisateur.
-3. Dans **Gérer la famille**, copiez le lien d'invitation et envoyez-le sur le groupe familial.
+**Aperçu des liens.** Il passe par le service gratuit [Microlink](https://microlink.io) : le lien collé lui est envoyé pour récupérer l'image. Pour le désactiver, mettez `LINK_PREVIEW = false` dans `assets/js/config.js`.
 
 ## Captures (données fictives)
 
-| Accueil | Réservation | Ma liste (cachée) |
-|---|---|---|
-| ![](docs/captures/02-accueil-mobile.png) | ![](docs/captures/04-apres-reservation.png) | ![](docs/captures/21-recherche.png) |
-
-![Liste sur ordinateur](docs/captures/10-liste-desktop.png)
+| Accueil | Liste de quelqu'un | Ma liste (cachée) | Calendrier |
+|---|---|---|---|
+| ![](docs/captures/accueil.png) | ![](docs/captures/liste.png) | ![](docs/captures/ma-liste.png) | ![](docs/captures/avent.png) |

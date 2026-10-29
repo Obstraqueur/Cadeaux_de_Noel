@@ -1,8 +1,0 @@
-{% load noel_tags %}<a class="person" href="{{ m.get_absolute_url }}">
-  {% avatar m %}
-  <span class="person__name">{{ m.name }}</span>
-  <span class="person__meta">
-    {% if m.total_ideas %}{% if m.free_ideas %}{{ m.free_ideas }} libre{{ m.free_ideas|pluralize }} sur {{ m.total_ideas }}{% else %}Tout est pris{% endif %}{% else %}Pas encore d'idée{% endif %}
-  </span>
-  {% if m.household %}<span class="person__house">{{ m.household.name }}</span>{% endif %}
-</a>

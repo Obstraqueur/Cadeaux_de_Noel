@@ -1,9 +1,0 @@
-{% load noel_tags %}<form class="ideaform" id="idea-form"
-      hx-post="{% url 'idea_add' family.slug recipient.pk %}" {% if owner_view %}hx-swap="none"{% else %}hx-target="#ideas" hx-swap="afterbegin"{% endif %}
-      method="post" action="{% url 'idea_add' family.slug recipient.pk %}">
-  {% csrf_token %}
-  {% include 'noel/partials/fields.html' %}
-  <div class="ideaform__actions">
-    <button class="btn btn--primary" type="submit">Ajouter à la liste</button>
-  </div>
-</form>
