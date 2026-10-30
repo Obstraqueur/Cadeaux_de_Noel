@@ -1,6 +1,6 @@
 // Cadeaux de Noël — application (pages statiques + Supabase).
-import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261030145800";
-import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261030145800";
+import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261030150228";
+import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261030150228";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: "cadeaux-de-noel" },
@@ -359,19 +359,13 @@ async function viewFamily(famId) {
       ${mineRes.length ? html`<a class="mine__card mine__card--soft" href="#/f/${famId}/achats"><span class="mine__icon">${icon("bag")}</span>
         <span class="mine__text"><strong>À acheter</strong><span>${todo ? `${todo} sur ${mineRes.length} pas encore acheté${todo > 1 ? "s" : ""}` : "Tout est acheté, bravo !"}</span></span></a>` : ""}
       ${adventToday ? html`<div class="advent-home">
-          <button type="button" class="advent-home__door" data-advent-open="${advent.indexOf(adventToday)}" aria-label="Ouvrir la case du jour">
+          <button type="button" class="advent-home__door" data-advent-open="${advent.indexOf(adventToday)}" aria-label="Calendrier de l'Avent : ouvrir la case">
             ${adventUrls[adventToday.cover] ? html`<img src="${adventUrls[adventToday.cover]}" alt="">` : doorFace(adventToday)}
           </button>
-          <div class="advent-home__text"><strong>Calendrier de l'Avent</strong>
-            <span>${adventToday.day === today ? (adventToday.title || `Case du ${frDate(today)}`)
-              : adventPreview ? "Mode test : toutes les cases sont ouvertes" : `Case du ${frDate(adventToday.day)}`}</span>
-            <button type="button" class="btn btn--small btn--primary" data-advent-open="${advent.indexOf(adventToday)}">${adventToday.day === today ? "Ouvrir la case du jour" : "Ouvrir"}</button>
-            <a class="linkbtn" href="#/f/${famId}/avent">Voir tout le calendrier</a></div></div>`
+        </div>`
         : adventSoon ? html`<div class="advent-home">
           <a class="advent-home__door" href="#/f/${famId}/avent" aria-label="Voir le calendrier de l'Avent">${doorFace(adventSoon)}</a>
-          <div class="advent-home__text"><strong>Calendrier de l'Avent</strong>
-            <span>Première case le ${frDate(adventSoon.day)}</span>
-            <a class="btn btn--small btn--primary" href="#/f/${famId}/avent">Voir le calendrier</a></div></div>`
+        </div>`
         : !advent.length && ctx.isAdmin ? html`<a class="mine__card mine__card--advent" href="#/f/${famId}/avent/gestion"><span class="mine__icon">${icon("star")}</span>
           <span class="mine__text"><strong>Calendrier de l'Avent ${SEASON}</strong><span>Pas encore prêt : ajoutez les images des cases</span></span>
           <span class="mine__cta">Préparer</span></a>` : ""}

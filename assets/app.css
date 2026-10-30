@@ -515,13 +515,12 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 
 /* ---------- carte de l'Avent sur l'accueil (comme en 2025) */
 .advent-home {
-  display: flex; gap: 18px; align-items: center; padding: 16px;
-  background: var(--surface); border-radius: var(--r-panel); border: 1.5px solid color-mix(in srgb, var(--gold) 60%, var(--line));
+  display: flex; justify-content: center; align-items: center; padding: 8px 0;
   perspective: 900px;
 }
 @media (min-width: 760px) { .advent-home { grid-column: 2; } }
 .advent-home__door {
-  flex: none; width: 112px; aspect-ratio: 3 / 4; padding: 0; border: 0; cursor: pointer; overflow: hidden;
+  flex: none; width: 150px; aspect-ratio: 3 / 4; padding: 0; border: 0; cursor: pointer; overflow: hidden;
   border-radius: 14px; background: var(--accent); color: #fff; box-shadow: var(--shadow-tag);
   display: grid; place-items: center; transform-origin: left center; transition: transform .38s ease-in;
   animation: door-glow 2.4s ease-in-out infinite; outline: 3px solid var(--accent); outline-offset: 3px;
