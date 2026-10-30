@@ -166,6 +166,7 @@ function renderTopbar(ctx, section = "") {
       ${tab(`#/f/${f.id}/p/${me.id}`, "list", "Ma liste", "mine")}
       ${tab(`#/f/${f.id}/achats`, "bag", "À acheter", "purchases")}
       ${tab(`#/f/${f.id}/amis-secrets`, "dice", "Amis secrets", "draws")}
+      ${tab(`#/f/${f.id}/avent`, "star", "Avent", "advent")}
     </nav>` : ""}
     <div class="topbar__tools">
       <button class="iconbtn" type="button" data-snow-toggle title="Neige" aria-label="Activer ou couper la neige">${icon("snow")}</button>
@@ -362,7 +363,10 @@ async function viewFamily(famId) {
             <button type="button" class="btn btn--small btn--primary" data-advent-open="${advent.indexOf(adventToday)}">Ouvrir la case du jour</button>
             <a class="linkbtn" href="#/f/${famId}/avent">Voir tout le calendrier</a></div></div>`
         : adventSoon ? html`<a class="mine__card mine__card--advent" href="#/f/${famId}/avent"><span class="mine__icon">${icon("star")}</span>
-          <span class="mine__text"><strong>Calendrier de l'Avent</strong><span>Première case le ${frDate(adventSoon.day)}</span></span></a>` : ""}
+          <span class="mine__text"><strong>Calendrier de l'Avent</strong><span>Première case le ${frDate(adventSoon.day)}</span></span></a>`
+        : !advent.length && ctx.isAdmin ? html`<a class="mine__card mine__card--advent" href="#/f/${famId}/avent/gestion"><span class="mine__icon">${icon("star")}</span>
+          <span class="mine__text"><strong>Calendrier de l'Avent ${SEASON}</strong><span>Pas encore prêt : ajoutez les images des cases</span></span>
+          <span class="mine__cta">Préparer</span></a>` : ""}
       ${Object.values(groups).map((g) => html`<div class="santa">
         <span class="santa__label">${g.draw.title}${g.giver?.id !== ctx.me.id ? `, pour ${g.giver?.name}` : ""}</span>
         <span class="santa__name">${g.giver?.id === ctx.me.id ? "Vous offrez à" : `${g.giver?.name} offre à`}</span>

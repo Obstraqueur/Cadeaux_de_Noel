@@ -117,14 +117,14 @@ img { max-width: 100%; }
 /* Onglets : en bas sur mobile, dans la barre sur ordinateur */
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--surface); color: var(--muted);
   border-top: 1px solid var(--line);
   padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
 }
 .tabs a {
   display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border-radius: 12px;
-  text-decoration: none; font-size: .78rem; font-weight: 700;
+  text-decoration: none; font-size: .74rem; font-weight: 700; white-space: nowrap;
 }
 .tabs a .icon { width: 24px; height: 24px; }
 .tabs a[aria-current="page"] { color: var(--primary); }
@@ -164,7 +164,7 @@ img { max-width: 100%; }
 .mine__text span { opacity: .85; }
 .mine__cta { margin-left: auto; font-weight: 700; padding: 8px 16px; border-radius: var(--r-btn); background: color-mix(in srgb, var(--primary-ink) 16%, transparent); white-space: nowrap; }
 @media (max-width: 480px) { .mine__cta { display: none; } }
-.mine__icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--soft); color: var(--primary); }
+.mine__icon { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--soft); color: var(--primary); }
 
 .santa {
   position: relative; display: grid; gap: 4px; padding: 18px 20px 18px 24px; text-decoration: none;
