@@ -329,7 +329,11 @@ async function viewFamily(famId) {
     const k = a.draws.id + a.giver_id;
     (groups[k] ||= { draw: a.draws, giver: ctx.byId[a.giver_id], receivers: [] }).receivers.push(ctx.byId[a.receiver_id]);
   });
-  const adventToday = advent.find((d) => d.day === today);
+  const adventPreview = advent.some((d) => d.preview);
+  // Case mise en avant : celle du jour ; en mode test (ou après le début), la dernière case ouverte.
+  const adventToday = advent.find((d) => d.day === today)
+    || (adventPreview ? advent.find((d) => d.open) : null)
+    || [...advent].reverse().find((d) => d.open && d.day >= `${SEASON}-11-01`);
   const adventSoon = !adventToday && advent.find((d) => d.day > today);
   const adventUrls = adventToday ? await signedUrls(advent.filter((d) => d.open).flatMap((d) => [d.cover, d.inside])) : {};
   if (adventToday) onPaint(() => setupAdventViewer(advent.map((d) => (d.open
@@ -359,8 +363,9 @@ async function viewFamily(famId) {
             ${adventUrls[adventToday.cover] ? html`<img src="${adventUrls[adventToday.cover]}" alt="">` : doorFace(adventToday)}
           </button>
           <div class="advent-home__text"><strong>Calendrier de l'Avent</strong>
-            <span>${adventToday.title || `Case du ${frDate(today)}`}</span>
-            <button type="button" class="btn btn--small btn--primary" data-advent-open="${advent.indexOf(adventToday)}">Ouvrir la case du jour</button>
+            <span>${adventToday.day === today ? (adventToday.title || `Case du ${frDate(today)}`)
+              : adventPreview ? "Mode test : toutes les cases sont ouvertes" : `Case du ${frDate(adventToday.day)}`}</span>
+            <button type="button" class="btn btn--small btn--primary" data-advent-open="${advent.indexOf(adventToday)}">${adventToday.day === today ? "Ouvrir la case du jour" : "Ouvrir"}</button>
             <a class="linkbtn" href="#/f/${famId}/avent">Voir tout le calendrier</a></div></div>`
         : adventSoon ? html`<a class="mine__card mine__card--advent" href="#/f/${famId}/avent"><span class="mine__icon">${icon("star")}</span>
           <span class="mine__text"><strong>Calendrier de l'Avent</strong><span>Première case le ${frDate(adventSoon.day)}</span></span></a>`
@@ -672,10 +677,14 @@ async function viewAdvent(famId) {
   const days = await rpc("advent_calendar", { p_family: famId });
   const today = todayStr();
   const urls = await signedUrls(days.filter((d) => d.open).flatMap((d) => [d.cover, d.inside]));
+  const preview = days.some((d) => d.preview);
+  state.handlers["test-off"] = async () => { await rpc("advent_test_mode", { p_family: famId, p_on: false }); toast("Mode test coupé : les cases s'ouvriront le jour venu."); await refresh(); };
   const viewer = days.map((d) => (d.open ? { date: frDate(d.day, { weekday: "long", day: "numeric", month: "long" }), title: d.title, img: urls[d.inside] || "", text: d.text } : null));
   onPaint(() => setupAdventViewer(viewer));
   return html`<header class="pagehead"><h1 class="pagehead__title">Calendrier de l'Avent</h1>
       <p class="pagehead__sub">Une case par jour jusqu'à Noël. Les cases s'ouvrent le jour venu, pas avant.</p></header>
+    ${preview ? html`<p class="notice notice--key">${icon("eye-off")} <span><strong>Mode test :</strong> toutes les cases sont ouvertes pour toute la famille.
+      ${ctx.isAdmin ? html` <button class="linkbtn" data-act="test-off">Couper le mode test</button>` : ""}</span></p>` : ""}
     ${days.length ? html`<section class="block"><ol class="advent">${days.map((d, n) => html`
       <li class="door${d.open ? " door--open" : ""}${d.day === today ? " door--today" : ""}">
         ${d.open ? html`<button type="button" class="door__btn" data-advent-open="${n}" aria-label="Ouvrir la case du ${frDate(d.day)}">
@@ -790,6 +799,12 @@ async function viewAdventManage(famId) {
   renderTopbar(ctx, "advent");
   const days = await rpc("advent_calendar", { p_family: famId });
   const urls = await signedUrls(days.map((d) => d.cover));
+  const preview = days.some((d) => d.preview);
+  state.handlers["test-toggle"] = async () => {
+    await rpc("advent_test_mode", { p_family: famId, p_on: !preview });
+    toast(preview ? "Mode test coupé : les cases s'ouvriront le jour venu." : "Mode test : toutes les cases sont ouvertes.");
+    await refresh();
+  };
   state.handlers.bulk = async (form) => {
     const start = form.start.value;
     const files = [...form.files.files];
@@ -825,6 +840,10 @@ async function viewAdventManage(famId) {
   return html`<a class="back" href="#/f/${famId}/avent">${icon("arrow-left")} Calendrier</a>
     <header class="pagehead"><h1 class="pagehead__title">Préparer le calendrier ${SEASON}</h1>
       <p class="pagehead__sub">Chaque case a une image de porte (le numéro du jour, par exemple) et, à l'intérieur, une image ou un texte. Vous voyez toutes les cases, la famille seulement celles du jour et des jours passés.</p></header>
+    <section class="block panel"><h2 class="block__title">Mode test</h2>
+      <p class="panel__hint">${preview ? "Toutes les cases sont ouvertes pour toute la famille. Pensez à couper le mode test avant le début de l'Avent."
+        : "Ouvre toutes les cases tout de suite, pour vérifier le calendrier. Toute la famille les voit aussi."}</p>
+      <button class="btn ${preview ? "btn--primary" : ""}" data-act="test-toggle">${preview ? "Couper le mode test" : "Ouvrir toutes les cases (mode test)"}</button></section>
     <section class="block panel"><h2 class="block__title">Tout envoyer d'un coup</h2>
       <p class="panel__hint">Sélectionnez toutes les images du dossier en une fois (comme celles de l'an dernier : day0.png, day0_modal.png, day1.png…). « _modal » = l'image à l'intérieur. Chaque image est rangée à la bonne date.</p>
       <form data-form="bulk" class="stack">

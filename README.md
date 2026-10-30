@@ -28,7 +28,7 @@ L'analyse de l'ancien site et les raisons des choix sont dans **[docs/ANALYSE.md
 ### 1. Supabase : créer la base
 
 1. Dans Supabase, ouvrez **SQL Editor → New query**.
-2. Collez **tout** le fichier [`supabase/migrations/20261029120000_cadeaux_de_noel.sql`](supabase/migrations/20261029120000_cadeaux_de_noel.sql) et cliquez sur **Run**.
+2. Collez **tout** le fichier [`supabase/migrations/20261029120000_cadeaux_de_noel.sql`](supabase/migrations/20261029120000_cadeaux_de_noel.sql) et cliquez sur **Run**. Faites de même, dans l'ordre, avec les autres fichiers du dossier `supabase/migrations/`.
 3. Dans **Authentication → Sign In / Providers → Email**, désactivez **« Confirm email »**.
 
 Le script crée les tables, les règles de sécurité, les fonctions et l'espace de stockage privé « avent » pour les images du calendrier.
