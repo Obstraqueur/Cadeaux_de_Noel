@@ -533,3 +533,42 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .advent-home__text strong { font: 700 1.2rem/1.15 var(--f-display); }
 .advent-home__text span { color: var(--muted); }
 .advent-home__text .btn { margin-top: 4px; }
+
+/* ---------- portes dessinées et méditations (livret « Psaume 23 ») */
+.door-face {
+  position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden;
+  background: #FF914D; color: #fff;
+}
+.door-face__num {
+  font: 800 clamp(2.4rem, 11vw, 3.6rem)/1 var(--f-display); letter-spacing: -.04em;
+  background: linear-gradient(180deg, #8E3A14, #F27A3E); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.door-face__wave { position: absolute; left: 0; right: 0; bottom: 8%; width: 100%; height: 12%; }
+.door-face__wave path { fill: none; stroke: #C2622E; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.door-face--eve { background: #FDF2C4; }
+.door-face--eve .door-face__wave path { stroke: #E2A23A; }
+.door-face--cover { background: #9A4A23; align-content: center; gap: 4px; padding: 8px; text-align: center; }
+.door-face--cover .door-face__wave path { stroke: #FF914D; }
+.door-face__cover-title { font: 600 1.05rem/1.05 var(--f-display); color: #F3E9DD; }
+.door-face__cover-sub { font-size: .55rem; letter-spacing: .08em; color: #F3E9DD; opacity: .85; }
+.door-face__stars { position: absolute; top: 8%; color: #FF914D; font-size: .7rem; letter-spacing: .3em; }
+.door__btn .door-face ~ .door__num, .door__btn .door-face + .door__flag { z-index: 1; }
+.door__flag { z-index: 2; }
+.advent-home__door { position: relative; }
+.advent-home__door .door-face__num { font-size: 3.4rem; }
+
+.meditation {
+  background: #FDE7C8; color: #1E1A16; border-radius: 14px; padding: 22px 20px 26px;
+  font-size: 1.05rem; line-height: 1.6;
+}
+.meditation__title { font: 800 1.45rem/1.15 var(--f-display); text-align: center; margin: 0 0 14px; letter-spacing: -.01em; }
+.meditation p { margin: 0 0 14px; text-align: left; }
+@media (min-width: 640px) { .meditation p { text-align: justify; hyphens: auto; } }
+.meditation p.is-center { text-align: center; }
+.meditation p:last-child { margin-bottom: 0; }
+.meditation .hl { font-weight: 700; }
+.hl--b { color: #0B32C4; }
+.hl--r { color: #C40000; }
+.hl--g { color: #2E7D32; }
+.hl--o { color: #E8661C; }
+.advent-view__body { max-height: calc(92dvh - 60px); overflow-y: auto; }

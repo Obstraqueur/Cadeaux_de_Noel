@@ -333,7 +333,7 @@ async function viewFamily(famId) {
   const adventSoon = !adventToday && advent.find((d) => d.day > today);
   const adventUrls = adventToday ? await signedUrls(advent.filter((d) => d.open).flatMap((d) => [d.cover, d.inside])) : {};
   if (adventToday) onPaint(() => setupAdventViewer(advent.map((d) => (d.open
-    ? { title: `${d.title || "Avent"} — ${frDate(d.day)}`, img: adventUrls[d.inside] || adventUrls[d.cover] || "", text: d.text } : null))));
+    ? { date: frDate(d.day, { weekday: "long", day: "numeric", month: "long" }), title: d.title, img: adventUrls[d.inside] || "", text: d.text } : null))));
   const days = daysUntilChristmas();
   const others = ctx.members.filter((m) => m.id !== ctx.me.id);
   const person = (m) => {
@@ -356,7 +356,7 @@ async function viewFamily(famId) {
         <span class="mine__text"><strong>À acheter</strong><span>${todo ? `${todo} sur ${mineRes.length} pas encore acheté${todo > 1 ? "s" : ""}` : "Tout est acheté, bravo !"}</span></span></a>` : ""}
       ${adventToday ? html`<div class="advent-home">
           <button type="button" class="advent-home__door" data-advent-open="${advent.indexOf(adventToday)}" aria-label="Ouvrir la case du jour">
-            ${adventUrls[adventToday.cover] ? html`<img src="${adventUrls[adventToday.cover]}" alt="">` : html`<span class="door__num">${+today.slice(8)}</span>`}
+            ${adventUrls[adventToday.cover] ? html`<img src="${adventUrls[adventToday.cover]}" alt="">` : doorFace(adventToday)}
           </button>
           <div class="advent-home__text"><strong>Calendrier de l'Avent</strong>
             <span>${adventToday.title || `Case du ${frDate(today)}`}</span>
@@ -672,14 +672,14 @@ async function viewAdvent(famId) {
   const days = await rpc("advent_calendar", { p_family: famId });
   const today = todayStr();
   const urls = await signedUrls(days.filter((d) => d.open).flatMap((d) => [d.cover, d.inside]));
-  const viewer = days.map((d) => (d.open ? { title: `${d.title || "Avent"} — ${frDate(d.day)}`, img: urls[d.inside] || urls[d.cover] || "", text: d.text } : null));
+  const viewer = days.map((d) => (d.open ? { date: frDate(d.day, { weekday: "long", day: "numeric", month: "long" }), title: d.title, img: urls[d.inside] || "", text: d.text } : null));
   onPaint(() => setupAdventViewer(viewer));
   return html`<header class="pagehead"><h1 class="pagehead__title">Calendrier de l'Avent</h1>
       <p class="pagehead__sub">Une case par jour jusqu'à Noël. Les cases s'ouvrent le jour venu, pas avant.</p></header>
     ${days.length ? html`<section class="block"><ol class="advent">${days.map((d, n) => html`
       <li class="door${d.open ? " door--open" : ""}${d.day === today ? " door--today" : ""}">
         ${d.open ? html`<button type="button" class="door__btn" data-advent-open="${n}" aria-label="Ouvrir la case du ${frDate(d.day)}">
-            ${urls[d.cover] ? html`<img src="${urls[d.cover]}" alt="" loading="lazy">` : ""}<span class="door__num">${+d.day.slice(8)}</span>
+            ${urls[d.cover] ? html`<img src="${urls[d.cover]}" alt="" loading="lazy">` : doorFace(d)}
             ${d.day === today ? html`<span class="door__flag">Aujourd'hui</span>` : ""}</button>`
           : html`<div class="door__btn door__btn--locked" aria-label="Case du ${frDate(d.day)}, pas encore ouverte">
             <span class="door__num">${+d.day.slice(8)}</span><span class="door__lock">${frDate(d.day, { day: "numeric", month: "short" })}</span></div>`}
@@ -688,6 +688,34 @@ async function viewAdvent(famId) {
     : html`<div class="empty"><p>Le calendrier ${SEASON} n'est pas encore prêt.</p>
         ${ctx.isAdmin ? html`<a class="btn btn--primary" href="#/f/${famId}/avent/gestion">Préparer le calendrier</a>` : ""}</div>`}
     ${ctx.isAdmin && days.length ? html`<p class="block"><a class="linkbtn" href="#/f/${famId}/avent/gestion">Modifier le calendrier</a></p>` : ""}`;
+}
+
+// Texte légèrement balisé des cases : paragraphes séparés par une ligne vide, « ^ » = centré,
+// **gras**, _italique_, {b|bleu} {r|rouge} {g|vert} {o|orange}.
+function richText(text) {
+  return (text || "").split(/\n\s*\n/).filter((p) => p.trim()).map((p) => {
+    let center = false;
+    if (p.startsWith("^")) { center = true; p = p.slice(1); }
+    let h = esc(p.trim())
+      .replace(/\{([brgo])\|([\s\S]+?)\}/g, '<span class="hl hl--$1">$2</span>')
+      .replace(/\*\*([\s\S]+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[\s(«>])_([\s\S]+?)_(?=$|[\s.,;:!?)»<])/g, "$1<em>$2</em>")
+      .replace(/\n/g, "<br>");
+    return `<p${center ? ' class="is-center"' : ""}>${h}</p>`;
+  }).join("");
+}
+
+// Porte dessinée (quand il n'y a pas d'image) : dans l'esprit du livret « Psaume 23 ».
+function doorFace(d) {
+  const day = +d.day.slice(8), month = +d.day.slice(5, 7);
+  if (month === 11) {
+    return html`<span class="door-face door-face--cover"><span class="door-face__stars">✦ · ✦</span>
+      <span class="door-face__cover-title">${(d.title || "Avent").split("—")[0].trim()}</span>
+      ${d.title?.includes("—") ? html`<span class="door-face__cover-sub">${d.title.split("—")[1].trim()}</span>` : ""}
+      <svg class="door-face__wave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C15 3 25 11 40 7 S47 2 45 5 S55 10 70 6 S90 4 100 8"/></svg></span>`;
+  }
+  return html`<span class="door-face${day === 24 ? " door-face--eve" : ""}"><span class="door-face__num">${day}</span>
+    <svg class="door-face__wave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 C15 3 25 11 40 7 S47 2 45 5 S55 10 70 6 S90 4 100 8"/></svg></span>`;
 }
 
 const adventDialog = () => html`<dialog class="advent-view" id="advent-view"><div class="advent-view__bar">
@@ -706,11 +734,17 @@ function setupAdventViewer(days) {
     const d = days[i];
     if (!d) return;
     cur = i;
-    view.querySelector(".advent-view__title").textContent = d.title;
+    view.querySelector(".advent-view__title").textContent = d.date;
     const body = view.querySelector(".advent-view__body");
     body.innerHTML = "";
-    if (d.img) { const im = new Image(); im.src = d.img; im.alt = d.title; body.appendChild(im); }
-    if (d.text) { const p = document.createElement("p"); p.className = "advent-view__text"; p.textContent = d.text; body.appendChild(p); }
+    if (d.img) { const im = new Image(); im.src = d.img; im.alt = d.title || ""; body.appendChild(im); }
+    if (d.title || d.text) {
+      const card = document.createElement("article");
+      card.className = "meditation";
+      card.innerHTML = (d.title ? `<h2 class="meditation__title">${esc(d.title)}</h2>` : "") + richText(d.text);
+      body.appendChild(card);
+    }
+    body.scrollTop = 0;
     view.querySelector('[data-advent-nav="-1"]').disabled = !days.slice(0, i).some(Boolean);
     view.querySelector('[data-advent-nav="1"]').disabled = !days.slice(i + 1).some(Boolean);
     try { localStorage.setItem(seenKey(i), "1"); } catch {}
