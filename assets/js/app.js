@@ -1,6 +1,6 @@
 // Cadeaux de Noël — application (pages statiques + Supabase).
-import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js";
-import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js";
+import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261030145800";
+import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261030145800";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: "cadeaux-de-noel" },
@@ -367,8 +367,11 @@ async function viewFamily(famId) {
               : adventPreview ? "Mode test : toutes les cases sont ouvertes" : `Case du ${frDate(adventToday.day)}`}</span>
             <button type="button" class="btn btn--small btn--primary" data-advent-open="${advent.indexOf(adventToday)}">${adventToday.day === today ? "Ouvrir la case du jour" : "Ouvrir"}</button>
             <a class="linkbtn" href="#/f/${famId}/avent">Voir tout le calendrier</a></div></div>`
-        : adventSoon ? html`<a class="mine__card mine__card--advent" href="#/f/${famId}/avent"><span class="mine__icon">${icon("star")}</span>
-          <span class="mine__text"><strong>Calendrier de l'Avent</strong><span>Première case le ${frDate(adventSoon.day)}</span></span></a>`
+        : adventSoon ? html`<div class="advent-home">
+          <a class="advent-home__door" href="#/f/${famId}/avent" aria-label="Voir le calendrier de l'Avent">${doorFace(adventSoon)}</a>
+          <div class="advent-home__text"><strong>Calendrier de l'Avent</strong>
+            <span>Première case le ${frDate(adventSoon.day)}</span>
+            <a class="btn btn--small btn--primary" href="#/f/${famId}/avent">Voir le calendrier</a></div></div>`
         : !advent.length && ctx.isAdmin ? html`<a class="mine__card mine__card--advent" href="#/f/${famId}/avent/gestion"><span class="mine__icon">${icon("star")}</span>
           <span class="mine__text"><strong>Calendrier de l'Avent ${SEASON}</strong><span>Pas encore prêt : ajoutez les images des cases</span></span>
           <span class="mine__cta">Préparer</span></a>` : ""}
