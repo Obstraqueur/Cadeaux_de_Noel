@@ -512,3 +512,24 @@ body.auth .page { width: 100%; max-width: 440px; padding: 24px 16px; }
 .field legend { font-weight: 700; font-size: .95rem; margin-bottom: 6px; }
 fieldset.field { border: 0; padding: 0; margin: 0; }
 .memberrow__more .addline--row { flex: 1; min-width: 260px; }
+
+/* ---------- carte de l'Avent sur l'accueil (comme en 2025) */
+.advent-home {
+  display: flex; gap: 18px; align-items: center; padding: 16px;
+  background: var(--surface); border-radius: var(--r-panel); border: 1.5px solid color-mix(in srgb, var(--gold) 60%, var(--line));
+  perspective: 900px;
+}
+@media (min-width: 760px) { .advent-home { grid-column: 2; } }
+.advent-home__door {
+  flex: none; width: 112px; aspect-ratio: 3 / 4; padding: 0; border: 0; cursor: pointer; overflow: hidden;
+  border-radius: 14px; background: var(--accent); color: #fff; box-shadow: var(--shadow-tag);
+  display: grid; place-items: center; transform-origin: left center; transition: transform .38s ease-in;
+  animation: door-glow 2.4s ease-in-out infinite; outline: 3px solid var(--accent); outline-offset: 3px;
+}
+.advent-home__door img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.advent-home__door .door__num { font-size: 2.6rem; }
+.advent-home__door.is-opening { transform: rotateY(-75deg); }
+.advent-home__text { display: grid; gap: 6px; justify-items: start; }
+.advent-home__text strong { font: 700 1.2rem/1.15 var(--f-display); }
+.advent-home__text span { color: var(--muted); }
+.advent-home__text .btn { margin-top: 4px; }

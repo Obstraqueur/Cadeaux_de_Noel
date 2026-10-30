@@ -10,7 +10,7 @@ L'analyse de l'ancien site et les raisons des choix sont dans **[docs/ANALYSE.md
 ## Ce que fait le site
 
 - **Ma liste, cachée même pour soi** : on ajoute ses idées (précisions, lien, prix, cœur « j'en rêve ») puis on les oublie. Le site affiche seulement combien on en a mis, et une **recherche** retrouve une idée pour la corriger ou la supprimer.
-- **« Toujours d'actualité ? »** : les idées non offertes des années passées s'affichent avec trois choix. « Oui » les range de nouveau (cachées), « Modifier » permet de les corriger, « Non » les supprime.
+- **« Toujours d'actualité ? »** : les idées non offertes des années passées s'affichent avec trois choix. « Garder » les range de nouveau (cachées), « Modifier » permet de les corriger, « Enlever » les retire.
 - **Les listes des autres** :
   - réserver une idée (« Je m'en occupe »), puis la marquer comme achetée ;
   - **participer à plusieurs** à un même cadeau ;
@@ -49,7 +49,7 @@ Collez le contenu de `import_famille_jean.sql` dans **SQL Editor** et cliquez su
 | Option | Effet |
 |---|---|
 | `--admin Edmond Isabelle` | Les organisateurs : ils gèrent la famille, les tirages et le calendrier. |
-| `--auteur-proprietaire` | Chacun pourra retrouver ses anciennes idées par la recherche, mais aussi celles que d'autres avaient ajoutées pour lui. Par défaut, les anciennes idées restent invisibles pour la personne concernée, comme dans l'ancien site. |
+| `--auteur-inconnu` | Par défaut, chaque ancienne idée est attribuée à la personne de la carte : elle la retrouve dans « Toujours d'actualité ? ». Avec cette option, les anciennes idées restent cachées pour elle et sont marquées « suggestion d'un tiers ». |
 | `--annee-defaut`, `--annee-tirages` | L'année des idées et des tirages, quand une base ancienne ne l'enregistre pas. |
 
 ### 3. GitHub Pages : mettre le site en ligne

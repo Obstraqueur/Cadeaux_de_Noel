@@ -279,7 +279,7 @@ async function viewHome() {
   };
   state.handlers.create = async (form) => {
     const fam = await rpc("create_family", { p_name: formData(form).name });
-    toast("Famille créée. Invitez les autres depuis « Gérer la famille ».");
+    toast("Famille créée. Invitez les autres depuis « Gérer la famille ».");
     go(`#/f/${fam}`);
   };
   return html`
@@ -330,6 +330,9 @@ async function viewFamily(famId) {
   });
   const adventToday = advent.find((d) => d.day === today);
   const adventSoon = !adventToday && advent.find((d) => d.day > today);
+  const adventUrls = adventToday ? await signedUrls(advent.filter((d) => d.open).flatMap((d) => [d.cover, d.inside])) : {};
+  if (adventToday) onPaint(() => setupAdventViewer(advent.map((d) => (d.open
+    ? { title: `${d.title || "Avent"} — ${frDate(d.day)}`, img: adventUrls[d.inside] || adventUrls[d.cover] || "", text: d.text } : null))));
   const days = daysUntilChristmas();
   const others = ctx.members.filter((m) => m.id !== ctx.me.id);
   const person = (m) => {
@@ -350,8 +353,16 @@ async function viewFamily(famId) {
         <span class="mine__cta">${myCount ? "Ajouter" : "Commencer"}</span></a>
       ${mineRes.length ? html`<a class="mine__card mine__card--soft" href="#/f/${famId}/achats"><span class="mine__icon">${icon("bag")}</span>
         <span class="mine__text"><strong>À acheter</strong><span>${todo ? `${todo} sur ${mineRes.length} pas encore acheté${todo > 1 ? "s" : ""}` : "Tout est acheté, bravo !"}</span></span></a>` : ""}
-      ${adventToday || adventSoon ? html`<a class="mine__card mine__card--advent" href="#/f/${famId}/avent"><span class="mine__icon">${icon("star")}</span>
-        <span class="mine__text"><strong>Calendrier de l'Avent</strong><span>${adventToday ? "La case du jour est ouverte" : `Première case le ${frDate(adventSoon.day)}`}</span></span></a>` : ""}
+      ${adventToday ? html`<div class="advent-home">
+          <button type="button" class="advent-home__door" data-advent-open="${advent.indexOf(adventToday)}" aria-label="Ouvrir la case du jour">
+            ${adventUrls[adventToday.cover] ? html`<img src="${adventUrls[adventToday.cover]}" alt="">` : html`<span class="door__num">${+today.slice(8)}</span>`}
+          </button>
+          <div class="advent-home__text"><strong>Calendrier de l'Avent</strong>
+            <span>${adventToday.title || `Case du ${frDate(today)}`}</span>
+            <button type="button" class="btn btn--small btn--primary" data-advent-open="${advent.indexOf(adventToday)}">Ouvrir la case du jour</button>
+            <a class="linkbtn" href="#/f/${famId}/avent">Voir tout le calendrier</a></div></div>`
+        : adventSoon ? html`<a class="mine__card mine__card--advent" href="#/f/${famId}/avent"><span class="mine__icon">${icon("star")}</span>
+          <span class="mine__text"><strong>Calendrier de l'Avent</strong><span>Première case le ${frDate(adventSoon.day)}</span></span></a>` : ""}
       ${Object.values(groups).map((g) => html`<div class="santa">
         <span class="santa__label">${g.draw.title}${g.giver?.id !== ctx.me.id ? `, pour ${g.giver?.name}` : ""}</span>
         <span class="santa__name">${g.giver?.id === ctx.me.id ? "Vous offrez à" : `${g.giver?.name} offre à`}</span>
@@ -363,7 +374,8 @@ async function viewFamily(famId) {
     <section class="block"><h2 class="block__title">Pour qui cherchez-vous ?</h2>
       ${others.length ? html`<div class="people">${others.map(person)}</div>` :
         html`<div class="empty"><p>Vous êtes seul ici pour l'instant.</p>${ctx.isAdmin ? html`<a class="btn" href="#/f/${famId}/gestion">Inviter la famille</a>` : ""}</div>`}
-    </section>`;
+    </section>
+    ${adventToday ? adventDialog() : ""}`;
 }
 
 // ============================================================================ une liste
@@ -392,9 +404,9 @@ function ideaCard(i, ctx, { ownerView = false, review = false } = {}) {
     (mine || participating) && "tag--mine", surprise && "tag--tiers", review && "tag--older"].filter(Boolean).join(" ");
   let actions = "";
   if (review) {
-    actions = html`<button class="btn btn--small btn--primary" data-act="keep" data-id="${i.id}">${icon("check")} Oui</button>
+    actions = html`<button class="btn btn--small btn--primary" data-act="keep" data-id="${i.id}">${icon("check")} Garder</button>
       <button class="btn btn--small" data-act="edit" data-id="${i.id}" data-renew="1">${icon("edit")} Modifier</button>
-      <button class="btn btn--small btn--ghost" data-act="delete" data-id="${i.id}">Non</button>`;
+      <button class="btn btn--small btn--ghost" data-act="drop" data-id="${i.id}">Enlever</button>`;
   } else if (!ownerView) {
     const a = (act, label, cl = "") => html`<button class="btn btn--small ${cl}" data-act="res" data-do="${act}" data-id="${i.id}">${label}</button>`;
     if (!res) actions = a("reserve", "Je m'en occupe", "btn--primary");
@@ -421,7 +433,7 @@ function ideaCard(i, ctx, { ownerView = false, review = false } = {}) {
     <div class="tag__actions">${actions}
       ${edit && !review ? html`<span class="tag__tools">
         <button class="iconbtn iconbtn--small" data-act="edit" data-id="${i.id}" aria-label="Modifier">${icon("edit")}</button>
-        <button class="iconbtn iconbtn--small" data-act="delete" data-id="${i.id}" data-confirm="Supprimer « ${i.title.slice(0, 60)} » ?" aria-label="Supprimer">${icon("trash")}</button></span>` : ""}
+        <button class="iconbtn iconbtn--small" data-act="delete" data-id="${i.id}" data-confirm="Supprimer « ${i.title.slice(0, 60)} » ?" aria-label="Supprimer">${icon("trash")}</button></span>` : ""}
     </div></div></li>`;
 }
 
@@ -453,6 +465,10 @@ function bindIdeaActions(ctx, ideasById, { after = refresh, ownerView = false } 
     await rpc("delete_idea", { p_id: +el.dataset.id });
     toast("Idée supprimée"); await after();
   };
+  state.handlers.drop = async (el) => {
+    await rpc("keep_idea", { p_id: +el.dataset.id, p_keep: false });
+    toast("Idée enlevée de votre liste"); await after();
+  };
   state.handlers.keep = async (el) => {
     await rpc("keep_idea", { p_id: +el.dataset.id, p_keep: true });
     toast(`Rangée dans votre liste ${SEASON}`); await after();
@@ -473,7 +489,7 @@ async function viewMember(famId, memberId) {
     await rpc("add_idea", { p_recipient: r.id, p_title: d.title, p_details: d.details, p_url: url, p_price: d.price,
       p_favorite: !!d.favorite, p_preview: preview });
     form.reset();
-    if (ownerView) toast(`« ${d.title.slice(0, 50)} » est dans votre liste. Vous pouvez l'oublier 🎁`);
+    if (ownerView) toast(`« ${d.title.slice(0, 50)} » est dans votre liste. Vous pouvez l'oublier 🎁`);
     else toast(isSurpriseFor(r) ? `Suggestion ajoutée : ${r.name} ne la verra pas` : "Idée ajoutée");
     await refresh();
   };
@@ -481,7 +497,7 @@ async function viewMember(famId, memberId) {
   const adder = html`<section class="adder"><details class="adder__box" ${raw(ownerView && !(await rpc("my_count", { p_member: r.id })) ? "open" : "")}>
       <summary class="btn btn--primary btn--block">${icon("plus")} ${ownerView || editsList ? "Ajouter une idée" : `Suggérer une idée pour ${r.name}`}</summary>
       <form class="ideaform" id="idea-form" data-form="add-idea">${ideaForm()}</form></details>
-      ${!ownerView && !editsList ? html`<p class="adder__hint">${icon("eye-off")} Votre suggestion sera marquée « suggestion d'un tiers » et restera invisible pour ${r.name}.</p>` : ""}
+      ${!ownerView && !editsList ? html`<p class="adder__hint">${icon("eye-off")} Votre suggestion sera marquée « suggestion d'un tiers » et restera invisible pour ${r.name}.</p>` : ""}
     </section>`;
   const head = html`<a class="back" href="#/f/${famId}">${icon("arrow-left")} Accueil</a>
     <header class="listhead">${avatar(r, "xl")}<div>
@@ -501,7 +517,7 @@ async function viewMember(famId, memberId) {
       const found = await rpc("search_my_ideas", { p_member: r.id, p_query: lastQuery });
       found.forEach((i) => (byId[i.id] = i));
       box.innerHTML = String(found.length ? html`<ul class="tags">${found.map((i) => ideaCard(i, ctx, { ownerView: true }))}</ul>`
-        : html`<p class="finder__none">Aucune de vos idées ne contient « ${lastQuery.trim()} ».</p>`);
+        : html`<p class="finder__none">Aucune de vos idées ne contient « ${lastQuery.trim()} ».</p>`);
     };
     state.inputs.search = async (el) => { lastQuery = el.value; await runSearch(); };
     bindIdeaActions(ctx, byId, { ownerView: true, after: async () => { await refresh(); } });
@@ -516,7 +532,7 @@ async function viewMember(famId, memberId) {
     return html`${head}
       <section class="adder"><div class="vault" id="my-count"><span class="vault__icon">${icon("gift")}</span>
         <p>${count ? html`<strong>${plural(count, "idée")}</strong> dans votre liste ${SEASON}, bien rangée${count > 1 ? "s" : ""} à l'abri de vos yeux.`
-          : "Votre liste est vide. Une idée, même vague, aide beaucoup : « un livre de cuisine », « des gants chauds »…"}</p></div></section>
+          : "Votre liste est vide. Une idée, même vague, aide beaucoup : « un livre de cuisine », « des gants chauds »…"}</p></div></section>
       ${adder}
       <section class="block finder"><h2 class="block__title">Retrouver une de mes idées</h2>
         <p class="finder__hint">Pour la corriger ou la supprimer. Tapez quelques lettres de ce que vous aviez écrit.</p>
@@ -525,7 +541,7 @@ async function viewMember(famId, memberId) {
         <div id="search-results" aria-live="polite"></div></section>
       ${review.length ? html`<section class="block review-block"><h2 class="block__title">Toujours d'actualité ? <span class="count">${review.length}</span></h2>
         <p class="older__hint">Ces idées des années passées n'ont pas été offertes. Ça vous fait toujours envie ?
-          « Oui » la range dans votre liste ${SEASON}, « Modifier » permet de la corriger avant, « Non » la supprime.</p>
+          « Garder » la range dans votre liste ${SEASON} (elle redevient cachée), « Modifier » permet de la corriger avant, « Enlever » la retire.</p>
         <ul class="tags">${review.map((i) => ideaCard(i, ctx, { ownerView: true, review: true }))}</ul></section>` : ""}`;
   }
 
@@ -578,7 +594,7 @@ async function viewPurchases(famId) {
           ${i.archived ? html`<span class="chip chip--warn">Retirée de sa liste</span>` : ""}
           ${r.owner_id !== ctx.me.id ? html`<span class="chip">avec ${ctx.byId[r.owner_id]?.name || "quelqu'un"}</span>` : ""}</p></div></li>`;
     })}</ul></section>`
-    : html`<div class="empty"><p>Vous n'avez encore rien réservé. Ouvrez la liste de quelqu'un et choisissez « Je m'en occupe ».</p>
+    : html`<div class="empty"><p>Vous n'avez encore rien réservé. Ouvrez la liste de quelqu'un et choisissez « Je m'en occupe ».</p>
         <a class="btn btn--primary" href="#/f/${famId}">Voir les listes</a></div>`}`;
 }
 
@@ -598,7 +614,7 @@ async function viewDraws(famId) {
     const res = await rpc("run_draw", { p_family: famId, p_title: fd.get("title"), p_budget: fd.get("budget"),
       p_rounds: +fd.get("rounds"), p_participants: participants });
     let text = "Tirage effectué ! Chacun découvre ses amis secrets sur l'accueil.";
-    if (res.relaxed?.length) text += ` Impossible de tout respecter : on a seulement assoupli « ${res.relaxed.join(" », « ")} ».`;
+    if (res.relaxed?.length) text += ` Impossible de tout respecter : on a seulement assoupli « ${res.relaxed.join(" », « ")} ».`;
     toast(text); await refresh();
   };
   state.handlers["del-draw"] = async (el) => { await rpc("delete_draw", { p_id: el.dataset.id }); toast("Tirage supprimé."); await refresh(); };
@@ -621,7 +637,7 @@ async function viewDraws(famId) {
             <p>${gid === ctx.me.id ? "Vous offrez à" : `${ctx.byId[gid]?.name} offre à`}</p>
             <ul>${recs.map((r) => html`<li><a class="draw__who" href="#/f/${famId}/p/${r?.id}">${avatar(r, "sm")} ${r?.name}</a></li>`)}</ul></div>`)
           : html`<p class="draw__none">Vous ne participez pas à ce tirage.</p>`}
-        ${ctx.isAdmin ? html`<button class="btn btn--small btn--ghost" data-act="del-draw" data-id="${d.id}" data-confirm="Supprimer le tirage « ${d.title} » ? Chacun perdra ses amis secrets.">Supprimer ce tirage</button>` : ""}
+        ${ctx.isAdmin ? html`<button class="btn btn--small btn--ghost" data-act="del-draw" data-id="${d.id}" data-confirm="Supprimer le tirage « ${d.title} » ? Chacun perdra ses amis secrets.">Supprimer ce tirage</button>` : ""}
       </article>`;
     }) : html`<div class="empty"><p>Aucun tirage pour l'instant.${ctx.isAdmin ? "" : " Un organisateur de la famille peut en lancer un."}</p></div>`}</section>
     ${ctx.isAdmin ? html`<section class="block"><details class="panel" ${raw(draws.some((d) => d.year === SEASON) ? "" : "open")}>
@@ -664,22 +680,24 @@ async function viewAdvent(famId) {
           : html`<div class="door__btn door__btn--locked" aria-label="Case du ${frDate(d.day)}, pas encore ouverte">
             <span class="door__num">${+d.day.slice(8)}</span><span class="door__lock">${frDate(d.day, { day: "numeric", month: "short" })}</span></div>`}
       </li>`)}</ol></section>
-      <dialog class="advent-view" id="advent-view"><div class="advent-view__bar">
-        <button class="iconbtn" type="button" data-advent-nav="-1" aria-label="Case précédente">${icon("arrow-left")}</button>
-        <p class="advent-view__title"></p>
-        <button class="iconbtn advent-view__next" type="button" data-advent-nav="1" aria-label="Case suivante">${icon("arrow-left")}</button>
-        <form method="dialog"><button class="iconbtn" aria-label="Fermer">✕</button></form></div>
-        <div class="advent-view__body"></div></dialog>`
+      ${adventDialog()}`
     : html`<div class="empty"><p>Le calendrier ${SEASON} n'est pas encore prêt.</p>
         ${ctx.isAdmin ? html`<a class="btn btn--primary" href="#/f/${famId}/avent/gestion">Préparer le calendrier</a>` : ""}</div>`}
     ${ctx.isAdmin && days.length ? html`<p class="block"><a class="linkbtn" href="#/f/${famId}/avent/gestion">Modifier le calendrier</a></p>` : ""}`;
 }
 
+const adventDialog = () => html`<dialog class="advent-view" id="advent-view"><div class="advent-view__bar">
+    <button class="iconbtn" type="button" data-advent-nav="-1" aria-label="Case précédente">${icon("arrow-left")}</button>
+    <p class="advent-view__title"></p>
+    <button class="iconbtn advent-view__next" type="button" data-advent-nav="1" aria-label="Case suivante">${icon("arrow-left")}</button>
+    <form method="dialog"><button class="iconbtn" aria-label="Fermer">✕</button></form></div>
+    <div class="advent-view__body"></div></dialog>`;
+
 function setupAdventViewer(days) {
   const view = document.getElementById("advent-view");
   if (!view) return;
   let cur = -1;
-  const seenKey = (i) => `avent-${location.hash}-${i}`;
+  const seenKey = (i) => `avent-${location.hash.split("/")[2]}-${i}`;
   const show = (i) => {
     const d = days[i];
     if (!d) return;
@@ -693,7 +711,13 @@ function setupAdventViewer(days) {
     view.querySelector('[data-advent-nav="1"]').disabled = !days.slice(i + 1).some(Boolean);
     try { localStorage.setItem(seenKey(i), "1"); } catch {}
     main.querySelector(`[data-advent-open="${i}"]`)?.closest(".door")?.classList.add("door--seen");
-    if (!view.open) view.showModal();
+    if (!view.open) {
+      const door = main.querySelector(".advent-home__door");
+      if (door && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        door.classList.add("is-opening");
+        setTimeout(() => { door.classList.remove("is-opening"); view.showModal(); }, 380);
+      } else view.showModal();
+    }
   };
   main.querySelectorAll("[data-advent-open]").forEach((b) => {
     const i = +b.dataset.adventOpen;
@@ -764,9 +788,9 @@ async function viewAdventManage(famId) {
     <header class="pagehead"><h1 class="pagehead__title">Préparer le calendrier ${SEASON}</h1>
       <p class="pagehead__sub">Chaque case a une image de porte (le numéro du jour, par exemple) et, à l'intérieur, une image ou un texte. Vous voyez toutes les cases, la famille seulement celles du jour et des jours passés.</p></header>
     <section class="block panel"><h2 class="block__title">Tout envoyer d'un coup</h2>
-      <p class="panel__hint">Sélectionnez toutes les images du dossier en une fois (comme celles de l'an dernier : day0.png, day0_modal.png, day1.png…). « _modal » = l'image à l'intérieur. Chaque image est rangée à la bonne date.</p>
+      <p class="panel__hint">Sélectionnez toutes les images du dossier en une fois (comme celles de l'an dernier : day0.png, day0_modal.png, day1.png…). « _modal » = l'image à l'intérieur. Chaque image est rangée à la bonne date.</p>
       <form data-form="bulk" class="stack">
-        ${field({ name: "start", label: "Jour de la case 0", type: "date", value: `${SEASON}-11-30`, help: "« day0 » tombe ce jour-là, « day1 » le lendemain, etc." })}
+        ${field({ name: "start", label: "Jour de la case 0", type: "date", value: `${SEASON}-11-30`, help: "« day0 » tombe ce jour-là, « day1 » le lendemain, etc." })}
         <div class="field"><label for="files">Images</label><input class="input" id="files" name="files" type="file" accept="image/*" multiple required></div>
         <button class="btn btn--primary" type="submit">Envoyer les images</button></form></section>
     <section class="block panel"><h2 class="block__title">Ajouter ou remplacer une case</h2>
@@ -810,13 +834,13 @@ async function viewManage(famId) {
     const pwd = new FormData(form).get("password");
     const uname = await rpc("admin_reset_password", { p_member: form.dataset.id, p_password: pwd });
     form.reset();
-    toast(`Mot de passe provisoire enregistré. Dites à la personne de se connecter avec « ${uname} » et ce mot de passe, puis de le changer dans « Mon compte ».`);
+    toast(`Mot de passe provisoire enregistré. Dites à la personne de se connecter avec « ${uname} » et ce mot de passe, puis de le changer dans « Mon compte ».`);
   };
   state.handlers["remove-member"] = async (el) => { await rpc("admin_remove_member", { p_member: el.dataset.id }); toast("Membre retiré."); await refresh(); };
   state.handlers["add-profile"] = async (form) => {
     const fd = new FormData(form);
     await rpc("admin_add_profile", { p_family: famId, p_name: fd.get("name"), p_household: fd.get("household") || null });
-    toast(`Profil « ${fd.get("name")} » créé. Vous pouvez tenir sa liste.`); await refresh();
+    toast(`Profil « ${fd.get("name")} » créé. Vous pouvez tenir sa liste.`); await refresh();
   };
   state.handlers["add-house"] = async (form) => { await rpc("admin_household", { p_family: famId, p_name: formData(form).name }); toast("Foyer ajouté."); await refresh(); };
   state.handlers["del-house"] = async (el) => { await rpc("admin_household", { p_family: famId, p_name: "", p_delete: el.dataset.id }); toast("Foyer supprimé."); await refresh(); };
@@ -833,7 +857,7 @@ async function viewManage(famId) {
       <ul class="members">${ctx.members.map((m) => {
         const mgr = ctx.managersOf(m.id);
         return html`<li class="memberrow"><details><summary>${avatar(m, "sm")}<span class="memberrow__name">${m.name}</span>
-          <span class="memberrow__meta">${m.household_id ? ctx.houseById[m.household_id]?.name : "Sans foyer"}${m.is_admin ? ", organisateur" : ""}${m.user_id ? `, se connecte avec « ${usernames[m.id] || "?"} »` : ", sans compte"}</span></summary>
+          <span class="memberrow__meta">${m.household_id ? ctx.houseById[m.household_id]?.name : "Sans foyer"}${m.is_admin ? ", organisateur" : ""}${m.user_id ? `, se connecte avec « ${usernames[m.id] || "?"} »` : ", sans compte"}</span></summary>
           <form class="memberrow__form" data-form="save-member" data-id="${m.id}">
             ${field({ name: "name", label: "Prénom affiché", value: m.name, required: true })}
             <div class="field"><label>Foyer</label>${houseSelect(m.household_id)}</div>
@@ -855,7 +879,7 @@ async function viewManage(famId) {
     <section class="block panel"><h2 class="block__title">Foyers</h2>
       <p class="panel__hint">Les personnes d'un même foyer (couple, frères et sœurs…) ne se tirent pas entre elles aux amis secrets.</p>
       <ul class="households">${ctx.households.map((h) => html`<li><span>${h.name}</span><span class="count">${ctx.members.filter((m) => m.household_id === h.id).length}</span>
-        <button class="iconbtn iconbtn--small" data-act="del-house" data-id="${h.id}" data-confirm="Supprimer le foyer « ${h.name} » ? Ses membres restent dans la famille." aria-label="Supprimer">${icon("trash")}</button></li>`)}</ul>
+        <button class="iconbtn iconbtn--small" data-act="del-house" data-id="${h.id}" data-confirm="Supprimer le foyer « ${h.name} » ? Ses membres restent dans la famille." aria-label="Supprimer">${icon("trash")}</button></li>`)}</ul>
       <form data-form="add-house" class="addline addline--row">${field({ name: "name", label: "Nouveau foyer", placeholder: "Ex. Isabelle & Frédéric", required: true })}<button class="btn" type="submit">Ajouter</button></form></section>
     <section class="block panel"><h2 class="block__title">Nom de la famille</h2>
       <form data-form="rename" class="addline addline--row">${field({ name: "name", label: "Nom", value: ctx.family.name, required: true })}<button class="btn" type="submit">Renommer</button></form></section>`;
@@ -876,7 +900,7 @@ async function viewAccount() {
     form.reset(); toast("Mot de passe modifié.");
   };
   return html`<a class="back" href="#/">${icon("arrow-left")} Accueil</a>
-    <header class="pagehead"><h1 class="pagehead__title">Mon compte</h1><p class="pagehead__sub">Vous vous connectez avec « ${acc.username || ""} ».</p></header>
+    <header class="pagehead"><h1 class="pagehead__title">Mon compte</h1><p class="pagehead__sub">Vous vous connectez avec « ${acc.username || ""} ».</p></header>
     <section class="block panel"><h2 class="block__title">Prénom affiché</h2>
       <form data-form="rename" class="addline addline--row">${field({ name: "name", label: "Prénom", value: me?.name || acc.username, required: true })}<button class="btn btn--primary">Enregistrer</button></form></section>
     <section class="block panel"><h2 class="block__title">Changer de mot de passe</h2>

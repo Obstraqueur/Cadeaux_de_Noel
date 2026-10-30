@@ -55,8 +55,9 @@ def main():
     ap.add_argument("--admin", nargs="*", default=[], help="Prénoms des organisateurs")
     ap.add_argument("--annee-defaut", type=int, default=2023, help="Année des idées sans année (défaut 2023)")
     ap.add_argument("--annee-tirages", type=int, default=2024, help="Année des tirages sans année (défaut 2024)")
-    ap.add_argument("--auteur-proprietaire", action="store_true",
-                    help="Considérer que chacun a écrit les idées de sa carte (il pourra les retrouver par la recherche)")
+    ap.add_argument("--auteur-inconnu", action="store_true",
+                    help="Ne pas attribuer les anciennes idées à la personne de la carte (elles restent cachées pour elle "
+                         "et apparaissent comme « suggestion d'un tiers »). Par défaut, chacun est l'auteur des idées de sa carte.")
     a = ap.parse_args()
 
     fam = str(uuid.uuid4())
@@ -135,7 +136,7 @@ def main():
     n_ideas = n_bought = 0
     for (key, title, year), info in ideas.items():
         mid = members[key][0]
-        author = lit(mid) if a.auteur_proprietaire else "null"
+        author = "null" if a.auteur_inconnu else lit(mid)
         w(f"with i as (insert into ideas (family_id, recipient_id, author_id, title, details, year) values "
           f"({lit(fam)}, {lit(mid)}, {author}, {lit(title)}, {lit(info['details'])}, {year}) returning id) "
           + (f"insert into reservations (idea_id, status) select id, 'bought' from i;" if info["fait"] else "select 1 from i;"))
