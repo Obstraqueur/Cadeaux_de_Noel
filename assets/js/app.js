@@ -1,6 +1,6 @@
 // Cadeaux de Noël — application (pages statiques + Supabase).
-import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261030150228";
-import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261030150228";
+import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261102074232";
+import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261102074232";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: "cadeaux-de-noel" },
@@ -76,6 +76,7 @@ async function linkPreview(url) {
 // ============================================================================ routes
 const routes = [
   [/^#\/connexion$/, viewLogin, true],
+  [/^#\/premiere-connexion$/, viewFirstLogin, true],
   [/^#\/invitation\/([^/?]+)$/, viewInvite, true],
   [/^#\/compte$/, viewAccount],
   [new RegExp(`^#/f/${UUID}$`), viewFamily],
@@ -209,7 +210,7 @@ const afterLogin = () => {
 };
 async function signIn(username, password) {
   const email = await rpc("login_email", { p_username: username });
-  if (!email) throw new Error("Prénom inconnu. Vérifiez l'orthographe ou demandez le lien d'invitation.");
+  if (!email) throw new Error("Prénom inconnu. Vérifiez l'orthographe, ou cliquez sur « Première connexion ».");
   const { error } = await sb.auth.signInWithPassword({ email, password });
   if (error) throw new Error("Mot de passe incorrect.");
 }
@@ -227,8 +228,38 @@ async function viewLogin() {
       ${field({ name: "password", label: "Mot de passe", type: "password", required: true, attrs: 'autocomplete="current-password"' })}
       <button class="btn btn--primary btn--block" type="submit">Se connecter</button>
     </form>
-    <p class="authcard__foot">Pas encore de compte ? Ouvrez le lien d'invitation envoyé par l'organisateur de votre famille.<br>
-    Mot de passe oublié ? L'organisateur peut vous en donner un provisoire.</p>`);
+    <a class="btn btn--block" style="margin-top:10px" href="#/premiere-connexion">Première connexion</a>
+    <p class="authcard__foot">Mot de passe oublié ? L'organisateur peut vous en donner un provisoire.</p>`);
+}
+
+async function viewFirstLogin() {
+  if (state.session) { afterLogin(); return; }
+  const profiles = await rpc("first_login_profiles");
+  onPaint(() => snow.attach());
+  const back = html`<p class="authcard__foot">Déjà un compte ? <a href="#/connexion">Se connecter</a></p>`;
+  if (!profiles.length) return authCard("Première connexion", "Tout le monde a déjà son compte.", html`
+    <a class="btn btn--primary btn--block" href="#/connexion">Aller à la connexion</a>
+    <p class="authcard__foot">Votre prénom n'est pas sur le site ? Demandez à l'organisateur de vous ajouter.</p>`);
+  const families = new Set(profiles.map((p) => p.family));
+  state.handlers.firstlogin = async (form) => {
+    const d = formData(form);
+    if (!d.member) throw new Error("Choisissez votre prénom.");
+    if (d.password !== d.password2) throw new Error("Les deux mots de passe ne sont pas identiques.");
+    const p = profiles.find((x) => x.id === d.member);
+    await rpc("claim_profile", { p_member: d.member, p_password: d.password });
+    await signIn(p.name, d.password);
+    toast(`Bienvenue ${p.name} 🎄`);
+  };
+  return authCard("Première connexion", "Choisissez votre prénom, puis votre mot de passe.", html`
+    <form data-form="firstlogin" class="stack">
+      <div class="field"><label for="member">Je suis…</label>
+        <select class="input" id="member" name="member" required><option value="">— Choisir mon prénom —</option>
+          ${profiles.map((p) => html`<option value="${p.id}">${p.name}${families.size > 1 ? ` (${p.family})` : ""}</option>`)}</select>
+        <p class="field__help">Ensuite, vous vous connecterez avec ce prénom et votre mot de passe.</p></div>
+      ${field({ name: "password", label: "Mon mot de passe", type: "password", required: true, help: "Au moins 6 caractères.", attrs: 'minlength="6" autocomplete="new-password"' })}
+      ${field({ name: "password2", label: "Confirmation", type: "password", required: true, attrs: 'minlength="6" autocomplete="new-password"' })}
+      <button class="btn btn--primary btn--block" type="submit">Créer mon compte</button>
+    </form>${back}`);
 }
 
 async function viewInvite(code) {

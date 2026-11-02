@@ -208,5 +208,19 @@ await test("un parent tient la liste de son enfant (idées non surprises)", asyn
   assert.equal((await one("select public.is_surprise(recipient_id, author_id) s from ideas where id = $1", [id])).s, false);
 });
 
+await test("première connexion : choisir son prénom sans lien", async () => {
+  await as(U.Alice);
+  const kid = (await one("select public.admin_add_profile($1, 'Zoé', null) id", [fam.id])).id;
+  await as(null, "anon");
+  const list = (await one("select public.first_login_profiles() l")).l;
+  assert.ok(list.some((p) => p.id === kid && p.name === "Zoé"));
+  assert.ok(!list.some((p) => p.name === "Alice"));
+  await assert.rejects(q("select public.claim_profile($1, 'abc')", [kid]), /6 caractères/);
+  await q("select public.claim_profile($1, 'secret1')", [kid]);
+  assert.ok((await one("select public.login_email('zoé') e")).e);
+  await assert.rejects(q("select public.claim_profile($1, 'secret1')", [kid]), /déjà un compte/);
+  assert.ok(!(await one("select public.first_login_profiles() l")).l.some((p) => p.id === kid));
+});
+
 console.log(`\n${passed} réussis, ${failures} en échec`);
 process.exit(failures ? 1 : 0);
