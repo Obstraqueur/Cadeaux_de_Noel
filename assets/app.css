@@ -76,7 +76,7 @@ img { max-width: 100%; }
 .topbar {
   position: sticky; top: 0; z-index: 20;
   background: var(--bar); color: var(--bar-ink);
-  overflow: hidden;
+  overflow-x: clip;   /* pas « hidden » : le menu du compte doit pouvoir dépasser en bas */
 }
 .topbar .snow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .topbar__inner {

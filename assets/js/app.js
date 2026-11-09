@@ -1,6 +1,6 @@
 // Cadeaux de Noël — application (pages statiques + Supabase).
-import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261102074232";
-import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261102074232";
+import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261109075115";
+import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261109075115";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: "cadeaux-de-noel" },
