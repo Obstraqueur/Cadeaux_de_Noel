@@ -1,6 +1,6 @@
 // Cadeaux de Noël — application (pages statiques + Supabase).
-import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261109075115";
-import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261109075115";
+import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261114135253";
+import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261114135253";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: "cadeaux-de-noel" },
@@ -54,7 +54,7 @@ function isSurprise(idea, ctx) {
   return !(author?.user_id && ctx.managersOf(idea.recipient_id).has(author.user_id));
 }
 const canEditList = (mid, ctx) => ctx.byId[mid]?.user_id === state.session.user.id || ctx.managersOf(mid).has(state.session.user.id);
-const canEditIdea = (i, ctx) => ctx.isAdmin || i.author_id === ctx.me.id || (canEditList(i.recipient_id, ctx) && !isSurprise(i, ctx));
+const canEditIdea = (i, ctx) => i.author_id === ctx.me.id || (canEditList(i.recipient_id, ctx) && !isSurprise(i, ctx));
 
 function normUrl(url) {
   url = (url || "").trim();
@@ -222,7 +222,7 @@ async function viewLogin() {
     await signIn(d.username, d.password);
   };
   onPaint(() => { snow.attach(); main.querySelector("input")?.focus(); });
-  return authCard("Cadeaux de Noël", "La liste au Père Noël de toute la famille.", html`
+  return authCard("Cadeaux de Noël", "Les idées cadeaux de toute la famille.", html`
     <form data-form="login" class="stack">
       ${field({ name: "username", label: "Prénom", required: true, attrs: 'autocomplete="username" autocapitalize="words"' })}
       ${field({ name: "password", label: "Mot de passe", type: "password", required: true, attrs: 'autocomplete="current-password"' })}

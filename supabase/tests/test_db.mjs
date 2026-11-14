@@ -120,6 +120,14 @@ await test("la personne ne peut pas modifier une suggestion d'un tiers", async (
   await as(U.Bob);
   await assert.rejects(q("select public.delete_idea($1)", [surprise]), /non autorisée/);
 });
+await test("seul l'auteur modifie ou supprime une idée, même l'organisateur ne peut pas", async () => {
+  await as(U.Alice); // organisatrice
+  await assert.rejects(q("select public.delete_idea($1)", [own]), /non autorisée/);
+  await assert.rejects(q("select public.update_idea($1, 'x', '', '', '', false)", [own]), /non autorisée/);
+  await q("select public.update_idea($1, 'Une montre', '', '', '', false)", [surprise]); // c'est elle qui l'a écrite
+  await as(U.Carla);
+  await assert.rejects(q("select public.delete_idea($1)", [surprise]), /non autorisée/);
+});
 await test("supprimer une idée réservée la retire sans la détruire", async () => {
   await as(U.Bob);
   await q("select public.delete_idea($1)", [own]);
