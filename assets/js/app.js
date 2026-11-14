@@ -1,6 +1,6 @@
 // Cadeaux de Noël — application (pages statiques + Supabase).
-import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261114135253";
-import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261114135253";
+import { SUPABASE_URL, SUPABASE_KEY, LINK_PREVIEW } from "./config.js?v=20261114135417";
+import { html, raw, esc, icon, avatar, plural, domain, frDate, toast, confirmBox, field, formData, busy } from "./ui.js?v=20261114135417";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: "cadeaux-de-noel" },
@@ -589,6 +589,9 @@ async function viewMember(famId, memberId) {
   const older = visible.filter((i) => i.year < SEASON && !one(i.reservations) && !i.archived);
   const free = current.filter((i) => !one(i.reservations));
   const taken = current.filter((i) => one(i.reservations));
+  const isMine = (i) => { const res = one(i.reservations);
+    return res.owner_id === ctx.me.id || (res.reservation_participants || []).some((p) => p.member_id === ctx.me.id); };
+  const takenMine = taken.filter(isMine), takenOthers = taken.filter((i) => !isMine(i));
   const byId = Object.fromEntries(all.map((i) => [i.id, i]));
   bindIdeaActions(ctx, byId);
   const santa = await q(sb.from("assignments").select("draws!inner(title, budget, year, family_id)")
@@ -599,8 +602,11 @@ async function viewMember(famId, memberId) {
     <section class="block"><h2 class="block__title">Idées disponibles</h2>
       ${free.length ? html`<ul class="tags" id="ideas">${free.map((i) => ideaCard(i, ctx))}</ul>`
         : html`<div class="empty"><p>Aucune idée libre pour l'instant. Suggérez-en une ci-dessus.</p></div>`}</section>
-    ${taken.length ? html`<section class="block"><h2 class="block__title">Déjà réservées</h2>
-      <ul class="tags tags--taken">${taken.map((i) => ideaCard(i, ctx))}</ul></section>` : ""}
+    ${takenMine.length ? html`<section class="block"><h2 class="block__title">Vous vous en occupez <span class="count">${takenMine.length}</span></h2>
+      <ul class="tags tags--taken">${takenMine.map((i) => ideaCard(i, ctx))}</ul></section>` : ""}
+    ${takenOthers.length ? html`<section class="block"><details class="older"><summary class="block__title">Déjà prises par d'autres <span class="count">${takenOthers.length}</span></summary>
+      <p class="older__hint">Réservées ou achetées par quelqu'un d'autre. Cachées pour ne pas encombrer la liste.</p>
+      <ul class="tags tags--taken">${takenOthers.map((i) => ideaCard(i, ctx))}</ul></details></section>` : ""}
     ${older.length ? html`<section class="block"><details class="older"><summary class="block__title">Idées des années précédentes <span class="count">${older.length}</span></summary>
       <p class="older__hint">Jamais offertes. Elles peuvent encore faire plaisir, mais vérifiez qu'elles sont toujours d'actualité.</p>
       <ul class="tags tags--older">${older.map((i) => ideaCard(i, ctx))}</ul></details></section>` : ""}`;
